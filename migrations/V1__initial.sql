@@ -27,7 +27,8 @@ CREATE TABLE "Mark" (
 	Retake1 REAL,
 	Retake2 REAL,
 	Extra TEXT,
-	Module TEXT NOT NULL, Status TEXT CHECK ( Status in ("Pass", "CF", "HF", "SF") ) NOT NULL,
+	Module TEXT NOT NULL,
+    Status TEXT CHECK ( Status in ("Pass", "CF", "HF", "SF") ) NOT NULL,
 	CONSTRAINT FK_marks_student_info FOREIGN KEY (ID) REFERENCES "StudentInfo"(ID),
 	CONSTRAINT marks_modules_FK FOREIGN KEY (Module) REFERENCES "Module"(Code)
 );

@@ -2,6 +2,7 @@
 use std::{path::Path, str::FromStr};
 
 use calamine::{open_workbook, CellType, Data, DataType, Range, Reader, Xlsx};
+use rusqlite::{types::ToSqlOutput, ToSql};
 use serde::Deserialize;
 
 use crate::{
@@ -243,7 +244,8 @@ impl StudentResult {
                 Headers::No => output.no = data.as_i64(),
                 Headers::Id => output.id = data.as_i64().ok_or(ParseResultError::InvalidID)?,
                 Headers::FirstName => {
-                    output.first_name = data.as_string().ok_or(ParseResultError::InvalidFirstName)?
+                    output.first_name =
+                        data.as_string().ok_or(ParseResultError::InvalidFirstName)?
                 }
                 Headers::LastName => {
                     output.last_name = data.as_string().ok_or(ParseResultError::InvalidLastName)?
@@ -521,5 +523,16 @@ impl TryFrom<&ColourValue> for ModuleStatus {
         } else {
             Err(ParseResultError::InvalidModule)
         }
+    }
+}
+
+impl ToSql for ModuleStatus {
+    fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput<'_>> {
+        Ok(match self {
+            ModuleStatus::Pass => ToSqlOutput::Borrowed("Pass".into()),
+            ModuleStatus::SoftFail => ToSqlOutput::Borrowed("SF".into()),
+            ModuleStatus::HardFail => ToSqlOutput::Borrowed("HF".into()),
+            ModuleStatus::ComponentFail => ToSqlOutput::Borrowed("CF".into()),
+        })
     }
 }

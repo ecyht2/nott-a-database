@@ -6,5 +6,7 @@ edition = "2021"
 [dependencies]
 calamine = "0.26.1"
 quick-xml = { version = "0.37.0", features = ["serialize"] }
+refinery = { version = "0.8.14", features = ["rusqlite"] }
+rusqlite = "0.31"
 serde = { version = "1.0.214", features = ["derive"] }
 zip = "2.2.0"
