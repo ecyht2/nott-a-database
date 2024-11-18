@@ -1,0 +1,13 @@
+[jobs.run-cli]
+command = [
+    "cargo",
+    "run",
+    "--color",
+    "always",
+    "--",
+    "./data.xlsx",
+]
+need_stdout = true
+
+[keybindings]
+r = "job:run-cli"
