@@ -72,7 +72,7 @@ pub struct FgColor {
 }
 
 /// A struct describing an ARGB colour in the workbook.
-#[derive(Debug)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct ColourValue {
     /// The alpha (transparency) channel value of the colour.
     pub alpha: u8,

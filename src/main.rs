@@ -44,7 +44,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )?;
     let mut insert_mark = conn.prepare(
         "INSERT INTO Mark
-         (ID, Module, Mark, Status) VALUES (?1, ?2, ?3, ?4)",
+         (ID, Module, Mark, Status, Fill) VALUES (?1, ?2, ?3, ?4, ?5)",
+    )?;
+    let mut colour_insert = conn.prepare(
+        "
+        INSERT INTO FillColour (Alpha, Red, Green, Blue)
+        SELECT ?1, ?2, ?3, ?4
+        WHERE NOT EXISTS (
+            SELECT Alpha, Red, Green, Blue
+            FROM FillColour
+            WHERE Alpha=?1 AND Red=?2 AND Green=?3 AND Blue=?4
+        )
+        ",
+    )?;
+    let mut colour_get = conn.prepare(
+        "
+        SELECT *
+        FROM FillColour
+        WHERE Alpha=?1 AND Red=?2 AND Green=?3 AND Blue=?4
+        ",
     )?;
 
     for result in data {
@@ -67,12 +85,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         for module in result.modules {
             insert_module.execute(params![module.code, module.credit])?;
+            let colour_id: Option<i64> = match module.fill {
+                Some(fill) => {
+                    colour_insert.execute(params![fill.alpha, fill.red, fill.green, fill.blue,])?;
+                    Some(colour_get.query_row(
+                        params![fill.alpha, fill.red, fill.green, fill.blue,],
+                        |row| row.get(0),
+                    )?)
+                }
+                None => None,
+            };
 
             insert_mark.insert(params![
                 result.id,
                 module.code,
                 module.mark,
                 module.status,
+                colour_id
             ])?;
         }
     }

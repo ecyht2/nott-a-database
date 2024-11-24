@@ -20,15 +20,27 @@ CREATE TABLE "Module" (
 	CONSTRAINT modules_pk PRIMARY KEY (Code)
 );
 
+-- Colour Definition
+CREATE TABLE "FillColour" (
+    rowid INTEGER,
+    Alpha INTEGER NOT NULL,
+    Red INTEGER NOT NULL,
+    Green INTEGER NOT NULL,
+    Blue INTEGER NOT NULL,
+	PRIMARY KEY (rowid)
+);
+
 -- Mark definition
 CREATE TABLE "Mark" (
 	ID INTEGER NOT NULL,
 	Mark REAL NOT NULL,
+    Fill INTEGER,
 	Retake1 REAL,
 	Retake2 REAL,
 	Extra TEXT,
 	Module TEXT NOT NULL,
     Status TEXT CHECK ( Status in ("Pass", "CF", "HF", "SF") ) NOT NULL,
+	CONSTRAINT marks_fill_FK FOREIGN KEY (Fill) REFERENCES "FillColour"(rowid),
 	CONSTRAINT FK_marks_student_info FOREIGN KEY (ID) REFERENCES "StudentInfo"(ID),
 	CONSTRAINT marks_modules_FK FOREIGN KEY (Module) REFERENCES "Module"(Code)
 );

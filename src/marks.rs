@@ -300,6 +300,7 @@ impl StudentResult {
 
                     if let Some(colour) = &fill.pattern_fill.fg_color {
                         tmp.status = ModuleStatus::try_from(&colour.rgb)?;
+                        tmp.fill = Some(colour.rgb.clone());
                     }
                     output.modules.push(tmp);
                 }
@@ -413,6 +414,8 @@ pub struct Mark {
     /// The current status of the moduel (Pass, Soft-Fail, Hard-Fail,
     /// Component-Fail).
     pub status: ModuleStatus,
+    /// The fill of the cell.
+    pub fill: Option<ColourValue>,
     /// The first result of the user taken from the student.
     pub mark: f64,
 }
