@@ -24,9 +24,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
          (AcademicYear) VALUES (?1)",
         params!["2024/2025"],
     )?;
+    let trans = conn.transaction()?;
 
     let data = StudentResult::from_workbook(file)?;
-    let mut insert_result = conn.prepare(
+    let mut insert_result = trans.prepare(
         "INSERT INTO Result
          (ID, AcademicYear, Plan, YearOfStudy, AutumnCredits, AutumnMean,
           SpringCredits, SpringMean, YearCredits, YearMean, Progression,
@@ -34,19 +35,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
          VALUES 
          (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
     )?;
-    let mut insert_student = conn.prepare(
+    let mut insert_student = trans.prepare(
         "INSERT OR IGNORE INTO StudentInfo
          (ID, FirstName, LastName) VALUES (?1, ?2, ?3)",
     )?;
-    let mut insert_module = conn.prepare(
+    let mut insert_module = trans.prepare(
         "INSERT OR IGNORE INTO Module
          (Code, Credit) VALUES (?1, ?2)",
     )?;
-    let mut insert_mark = conn.prepare(
+    let mut insert_mark = trans.prepare(
         "INSERT INTO Mark
          (ID, Module, Mark, Status, Fill) VALUES (?1, ?2, ?3, ?4, ?5)",
     )?;
-    let mut colour_insert = conn.prepare(
+    let mut colour_insert = trans.prepare(
         "
         INSERT INTO FillColour (Alpha, Red, Green, Blue)
         SELECT ?1, ?2, ?3, ?4
@@ -57,7 +58,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         ",
     )?;
-    let mut colour_get = conn.prepare(
+    let mut colour_get = trans.prepare(
         "
         SELECT *
         FROM FillColour
@@ -105,6 +106,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ])?;
         }
     }
+
+    drop(insert_result);
+    drop(insert_student);
+    drop(insert_module);
+    drop(insert_mark);
+    drop(colour_insert);
+    drop(colour_get);
+    trans.commit()?;
 
     Ok(())
 }
