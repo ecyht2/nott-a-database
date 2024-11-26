@@ -1,22 +1,43 @@
 //! Simple CLI to parse the raw data and store it into the database.
+use std::path::PathBuf;
+
+use clap::Parser;
 use refinery::embed_migrations;
 use rusqlite::{params, Connection};
 
-use nott_a_database::{database::insert_student_info, StudentInfo};
+use nott_a_database::{
+    database::{insert_student_info_transaction, insert_student_result_transaction},
+    StudentInfo, StudentResult,
+};
 
 embed_migrations!("./migrations");
 
+/// Simple CLI to parse the raw data and store it into the database.
+#[derive(Debug, Parser)]
+struct Arg {
+    /// The database file to save to.
+    datbase: PathBuf,
+    /// List of raw data file to parse.
+    #[command(flatten)]
+    data: RawData,
+}
+
+/// CLI arguments to supply raw data.
+#[derive(Debug, Parser)]
+#[group(required = true)]
+struct RawData {
+    /// Specify (can specify multiple) result report (0A) raw data to parse.
+    #[arg(long)]
+    result: Vec<PathBuf>,
+    /// Specify (can specify multiple) award report (0B) raw data to parse.
+    #[arg(long)]
+    award: Vec<PathBuf>,
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut args: Vec<String> = std::env::args().collect();
-    if args.len() != 2 {
-        return Err("Invalid Command Line Arguments".into());
-    }
+    let args = Arg::parse();
 
-    let file = args
-        .pop()
-        .expect("There should be atleast 2 elements in args");
-
-    let mut conn = Connection::open("./test.db")?;
+    let mut conn = Connection::open(args.datbase)?;
     conn.pragma(None, "foreign_keys", 1, |_| Ok(()))?;
     migrations::runner().run(&mut conn)?;
     conn.execute(
@@ -24,9 +45,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
          (AcademicYear) VALUES (?1)",
         params!["2024/2025"],
     )?;
+    let trans = conn.transaction()?;
 
-    let data = StudentInfo::from_award(file)?;
-    insert_student_info(&data, &mut conn)?;
+    // Parse result raw data
+    for file in args.data.result {
+        let data = StudentResult::from_workbook(file)?;
+        insert_student_result_transaction(&trans, &data)?;
+    }
+
+    // Parse award report raw data
+    for file in args.data.award {
+        let data = StudentInfo::from_award(file)?;
+        insert_student_info_transaction(&data, &trans)?;
+    }
+
+    trans.commit()?;
 
     Ok(())
 }

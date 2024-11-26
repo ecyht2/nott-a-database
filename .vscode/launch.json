@@ -8,6 +8,10 @@
             "name": "Debug CLI",
             "program": "${workspaceFolder}/target/debug/nott-a-database",
             "args": [
+                "./test.db",
+                "--result",
+                "./sample_0A.xlsx",
+                "--award",
                 "./sample_0B.xlsx"
             ]
         }
