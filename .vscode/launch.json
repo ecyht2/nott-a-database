@@ -8,7 +8,7 @@
             "name": "Debug CLI",
             "program": "${workspaceFolder}/target/debug/nott-a-database",
             "args": [
-                "./data.xlsx"
+                "./sample_0B.xlsx"
             ]
         }
     ]

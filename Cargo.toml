@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-calamine = "0.26.1"
+calamine = { version = "0.26.1", features = ["dates"] }
+chrono = "0.4.38"
 quick-xml = { version = "0.37.0", features = ["serialize"] }
 refinery = { version = "0.8.14", features = ["rusqlite"] }
 rusqlite = "0.31"

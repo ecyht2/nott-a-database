@@ -5,7 +5,7 @@ command = [
     "--color",
     "always",
     "--",
-    "./data.xlsx",
+    "./sample_0B.xlsx",
 ]
 need_stdout = true
 

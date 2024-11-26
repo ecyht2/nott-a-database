@@ -1,8 +1,8 @@
 //! Simple CLI to parse the raw data and store it into the database.
-
-use nott_a_database::{database::insert_student_result, StudentResult};
 use refinery::embed_migrations;
 use rusqlite::{params, Connection};
+
+use nott_a_database::{database::insert_student_info, StudentInfo};
 
 embed_migrations!("./migrations");
 
@@ -25,8 +25,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         params!["2024/2025"],
     )?;
 
-    let data = StudentResult::from_workbook(file)?;
-    insert_student_result(&mut conn, &data)?;
+    let data = StudentInfo::from_award(file)?;
+    insert_student_info(&data, &mut conn)?;
 
     Ok(())
 }

@@ -10,7 +10,8 @@
                 "--color",
                 "always",
                 "--",
-                "./data.xlsx"
+                "./test.db",
+                "./sample_0B.xlsx"
             ]
         }
     ]

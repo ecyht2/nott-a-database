@@ -7,8 +7,25 @@ CREATE TABLE "AcademicYear" (
 -- StudentInfo definition
 CREATE TABLE "StudentInfo" (
 	"ID"	INTEGER,
-	FirstName TEXT NOT NULL,
 	LastName TEXT NOT NULL,
+	FirstName TEXT NOT NULL,
+    CareerNo INTEGER,
+    Program TEXT,
+    ProgramDesc TEXT,
+	"Plan" TEXT NOT NULL,
+    PlanDesc TEXT,
+    INTAKE TEXT,
+    QAA TEXT,
+    CalcModel TEXT,
+    RawMark REAL,
+    TruncatedMark REAL,
+    FinalMark INTEGER,
+    Borderline TEXT,
+    Calculation INTEGER,
+    DegreeAward TEXT,
+    Selected INTEGER,
+    ExceptionData TEXT,
+    Recommendation TEXT,
 	PRIMARY KEY("ID")
 );
 
@@ -22,12 +39,11 @@ CREATE TABLE "Module" (
 
 -- Colour Definition
 CREATE TABLE "FillColour" (
-    rowid INTEGER,
+    rowid INTEGER PRIMARY KEY,
     Alpha INTEGER NOT NULL,
     Red INTEGER NOT NULL,
     Green INTEGER NOT NULL,
-    Blue INTEGER NOT NULL,
-	PRIMARY KEY (rowid)
+    Blue INTEGER NOT NULL
 );
 
 -- Mark definition
@@ -49,7 +65,6 @@ CREATE TABLE "Mark" (
 CREATE TABLE "Result" (
 	ID INTEGER NOT NULL,
 	AcademicYear TEXT NOT NULL,
-	"Plan" TEXT NOT NULL,
 	YearOfStudy INTEGER NOT NULL,
 	AutumnCredits INTEGER,
 	AutumnMean REAL,
