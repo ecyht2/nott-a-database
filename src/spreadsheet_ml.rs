@@ -11,6 +11,8 @@ use quick_xml::de::from_str;
 use serde::{de::Visitor, Deserialize};
 use zip::ZipArchive;
 
+use crate::ColourValue;
+
 /// The `Styles Part` in the workbook.
 #[derive(Debug, Deserialize)]
 pub struct Styles {
@@ -67,30 +69,15 @@ pub struct FgColor {
     /// intensity, and the blue intensity.
     ///
     /// The value is a 8 digit hexadecimal number encoded as a string.
-    #[serde(rename = "@rgb")]
+    #[serde(rename = "@rgb", deserialize_with = "deserialize_colour_value")]
     pub rgb: ColourValue,
 }
 
-/// A struct describing an ARGB colour in the workbook.
-#[derive(Clone, Debug, Default, PartialEq)]
-pub struct ColourValue {
-    /// The alpha (transparency) channel value of the colour.
-    pub alpha: u8,
-    /// The red channel value of the colour.
-    pub red: u8,
-    /// The green channel value of the colour.
-    pub green: u8,
-    /// The blue channel value of the colour.
-    pub blue: u8,
-}
-
-impl<'de> Deserialize<'de> for ColourValue {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        deserializer.deserialize_str(HexVisitor)
-    }
+fn deserialize_colour_value<'de, D>(deserializer: D) -> Result<ColourValue, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    deserializer.deserialize_str(HexVisitor)
 }
 
 /// Custom visitor for parsing [`ColourValue`] from an 8 digit hexadecimal string value.

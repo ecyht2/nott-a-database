@@ -1,20 +1,17 @@
 //! Parser for student marks data.
 use std::{path::Path, str::FromStr};
 
-use calamine::{open_workbook, CellType, Data, DataType, Range, Reader, Xlsx};
-use rusqlite::{types::ToSqlOutput, ToSql};
-use serde::Deserialize;
+use calamine::{open_workbook, Data, DataType, Range, Reader, Xlsx};
 
 use crate::{
     errors::{InvalidHeader, ParseResultError},
-    spreadsheet_ml::{
-        get_data, ColourValue, Relationships, SheetRow, Styles, Workbook, Worksheet, XlsxColumns,
-    },
+    spreadsheet_ml::{get_data, Relationships, SheetRow, Styles, Workbook, Worksheet, XlsxColumns},
+    ColourValue, Mark, ModuleStatus, StudentResult,
 };
 
 /// All the possible header column possible for [`Mark`] data.
 #[derive(Debug)]
-pub enum Headers {
+pub enum ResultHeaders {
     /// The entry number in the sheet.
     No,
     /// The student ID of the student.
@@ -59,12 +56,12 @@ pub enum Headers {
     Remarks,
 }
 
-impl Headers {
+impl ResultHeaders {
     /// Gets the header vector from the headers and sub-headers.
     pub fn get_headers(
         headers: &[String],
         sub_headers: &[String],
-    ) -> Result<Vec<Headers>, InvalidHeader> {
+    ) -> Result<Vec<ResultHeaders>, InvalidHeader> {
         /// All the possible status when parsing the headers of the raw data.
         ///
         /// The status determine what the next header should be based on the sub-headers.
@@ -137,14 +134,14 @@ impl Headers {
                     header = status.1.to_owned();
                 }
             }
-            output.push(self::Headers::from_str(&header)?);
+            output.push(self::ResultHeaders::from_str(&header)?);
         }
 
         Ok(output)
     }
 }
 
-impl FromStr for Headers {
+impl FromStr for ResultHeaders {
     type Err = InvalidHeader;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -175,107 +172,54 @@ impl FromStr for Headers {
     }
 }
 
-/// Struct represting a result of a student in the raw data.
-#[derive(Debug, Default, Deserialize)]
-pub struct StudentResult {
-    /// The entry number in the sheet.
-    pub no: Option<i64>,
-    /// The student ID of the student.
-    pub id: i64,
-    /// The last name of the student.
-    pub last_name: String,
-    /// The first name of the student.
-    pub first_name: String,
-    /// The course plan the student is studying.
-    pub plan: String,
-    /// The year of studies of the student.
-    pub year_of_program: String,
-    /// The progression status of the student, e.g. requires retake.
-    pub progression: String,
-    /// The amount of credits taken by the student in the Autumn Semester.
-    pub autumn_credit: Option<f64>,
-    /// The average/mean marks of the student in the Autumn Semester.
-    pub autumn_mean: Option<f64>,
-    /// The amount of credits taken by the student in the entire year.
-    pub full_credit: Option<f64>,
-    /// The average/mean marks of the student in the entire year.
-    pub full_mean: Option<f64>,
-    /// The amount of credits taken by the student in the Spring Semester.
-    pub spring_credit: Option<f64>,
-    /// The amount of credits taken by the student in the Spring Semester.
-    pub spring_mean: Option<f64>,
-    /// The amount of credits taken by the student in the entire year.
-    pub year_credit: Option<f64>,
-    /// The average/mean marks of the student in the entire year.
-    pub year_prog_average: Option<f64>,
-    /// The number of credits that has mark <30
-    pub credits_l3_lt30: Option<f64>,
-    /// The number of credits that has mark between 30-39.
-    pub credits_l3_30_39: Option<f64>,
-    /// The number of credits that has mark <40
-    pub credits_l4_lt40: Option<f64>,
-    /// The number of credits that has mark between 40-49.
-    pub credits_l4_40_49: Option<f64>,
-    /// All the marks of the modules taken by the student.
-    pub modules: Vec<Mark>,
-    /// Remarks regardding the students result.
-    pub remarks: Option<String>,
-}
-
 impl StudentResult {
-    /// Create a new [`StudentResult`] object.
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn from_row(
-        headers: &[Headers],
+    /// Parse a row of data from result report (0A).
+    pub fn from_result_row(
+        headers: &[ResultHeaders],
         row: &[Data],
         row_no: usize,
         styles: &Styles,
         row_data: &SheetRow,
     ) -> Result<Self, ParseResultError> {
-        let mut output = Self {
-            ..Default::default()
-        };
+        let mut output = Self::new();
 
         for (col, (header, data)) in headers.iter().zip(row).enumerate() {
             match header {
-                Headers::No => output.no = data.as_i64(),
-                Headers::Id => output.id = data.as_i64().ok_or(ParseResultError::InvalidID)?,
-                Headers::FirstName => {
+                ResultHeaders::No => output.no = data.as_i64(),
+                ResultHeaders::Id => output.id = data.as_i64().ok_or(ParseResultError::InvalidID)?,
+                ResultHeaders::FirstName => {
                     output.first_name =
                         data.as_string().ok_or(ParseResultError::InvalidFirstName)?
                 }
-                Headers::LastName => {
+                ResultHeaders::LastName => {
                     output.last_name = data.as_string().ok_or(ParseResultError::InvalidLastName)?
                 }
-                Headers::Plan => {
+                ResultHeaders::Plan => {
                     output.plan = data.as_string().ok_or(ParseResultError::InvalidPlan)?
                 }
-                Headers::YearOfProgram => {
+                ResultHeaders::YearOfProgram => {
                     output.year_of_program = data
                         .as_string()
                         .ok_or(ParseResultError::InvalidYearOfProgram)?
                 }
-                Headers::Progression => {
+                ResultHeaders::Progression => {
                     output.progression = data
                         .as_string()
                         .ok_or(ParseResultError::InvalidProgression)?
                 }
-                Headers::AutumnCredit => output.autumn_credit = data.as_f64(),
-                Headers::AutumnMean => output.autumn_mean = data.as_f64(),
-                Headers::SpringCredit => output.spring_credit = data.as_f64(),
-                Headers::SpringMean => output.spring_mean = data.as_f64(),
-                Headers::FullCredit => output.full_credit = data.as_f64(),
-                Headers::FullMean => output.full_mean = data.as_f64(),
-                Headers::YearCredit => output.year_credit = data.as_f64(),
-                Headers::YearProgAverage => output.year_prog_average = data.as_f64(),
-                Headers::CreditsL3Lt30 => output.credits_l3_lt30 = data.as_f64(),
-                Headers::CreditsL33039 => output.credits_l3_30_39 = data.as_f64(),
-                Headers::CreditsL4Lt40 => output.credits_l4_lt40 = data.as_f64(),
-                Headers::CreditsL44049 => output.credits_l4_40_49 = data.as_f64(),
-                Headers::Modules => {
+                ResultHeaders::AutumnCredit => output.autumn_credit = data.as_f64(),
+                ResultHeaders::AutumnMean => output.autumn_mean = data.as_f64(),
+                ResultHeaders::SpringCredit => output.spring_credit = data.as_f64(),
+                ResultHeaders::SpringMean => output.spring_mean = data.as_f64(),
+                ResultHeaders::FullCredit => output.full_credit = data.as_f64(),
+                ResultHeaders::FullMean => output.full_mean = data.as_f64(),
+                ResultHeaders::YearCredit => output.year_credit = data.as_f64(),
+                ResultHeaders::YearProgAverage => output.year_prog_average = data.as_f64(),
+                ResultHeaders::CreditsL3Lt30 => output.credits_l3_lt30 = data.as_f64(),
+                ResultHeaders::CreditsL33039 => output.credits_l3_30_39 = data.as_f64(),
+                ResultHeaders::CreditsL4Lt40 => output.credits_l4_lt40 = data.as_f64(),
+                ResultHeaders::CreditsL44049 => output.credits_l4_40_49 = data.as_f64(),
+                ResultHeaders::Modules => {
                     if data.is_empty() {
                         continue;
                     }
@@ -304,14 +248,15 @@ impl StudentResult {
                     }
                     output.modules.push(tmp);
                 }
-                Headers::Remarks => output.remarks = data.as_string(),
+                ResultHeaders::Remarks => output.remarks = data.as_string(),
             }
         }
 
         Ok(output)
     }
 
-    pub fn from_worksheet<P: AsRef<Path>>(
+    /// Parse a worksheet in from result report (0A).
+    pub fn from_result_worksheet<P: AsRef<Path>>(
         name: &str,
         range: Range<Data>,
         file: P,
@@ -319,6 +264,7 @@ impl StudentResult {
         relationship: &Relationships,
         styles: &Styles,
     ) -> Result<Vec<StudentResult>, Box<dyn std::error::Error>> {
+        // Extract worksheet and relationship metadata
         let worksheet = workbook
             .sheets
             .sheet
@@ -332,6 +278,7 @@ impl StudentResult {
             .expect("The parsed relationship XML should have the relationship.")
             .path;
 
+        // Extract raw worksheet data
         let worksheet_path = if sheet_file.starts_with("../") {
             Path::new(
                 sheet_file
@@ -363,14 +310,14 @@ impl StudentResult {
             .range((1, 0), range.end().unwrap())
             .headers()
             .ok_or("Invalid workbook given, the second row of data must be the sub-headers")?;
-        let headers = Headers::get_headers(&headers, &sub_headers)?;
+        let headers = ResultHeaders::get_headers(&headers, &sub_headers)?;
 
         let data: Vec<StudentResult> = range
             .rows()
             .enumerate()
             .skip(2)
             .map(|(row_no, row)| {
-                StudentResult::from_row(
+                StudentResult::from_result_row(
                     &headers,
                     row,
                     row_no + 1,
@@ -383,8 +330,8 @@ impl StudentResult {
         Ok(data)
     }
 
-    /// Extract all the student from a given Excel workbook.
-    pub fn from_workbook<P: AsRef<Path>>(
+    /// Extract all the student from a result report (0A) workbook.
+    pub fn from_result<P: AsRef<Path>>(
         file: P,
     ) -> Result<Vec<StudentResult>, Box<dyn std::error::Error>> {
         let mut excel: Xlsx<_> = open_workbook(&file).map_err(|_| "Unable to find workbook")?;
@@ -396,28 +343,12 @@ impl StudentResult {
         let mut data = vec![];
         for (name, sheet) in excel.worksheets() {
             let mut sheet_data =
-                Self::from_worksheet(&name, sheet, &file, &workbook, &relationship, &styles)?;
+                Self::from_result_worksheet(&name, sheet, &file, &workbook, &relationship, &styles)?;
             data.append(&mut sheet_data);
         }
 
         Ok(data)
     }
-}
-
-/// Container struct for a module information.
-#[derive(Clone, Debug, Default, Deserialize, PartialEq)]
-pub struct Mark {
-    /// The module code of the module taken by the student.
-    pub code: String,
-    /// The number of credits of the module taken by the student.
-    pub credit: i64,
-    /// The current status of the moduel (Pass, Soft-Fail, Hard-Fail,
-    /// Component-Fail).
-    pub status: ModuleStatus,
-    /// The fill of the cell.
-    pub fill: Option<ColourValue>,
-    /// The first result of the user taken from the student.
-    pub mark: f64,
 }
 
 impl FromStr for Mark {
@@ -449,36 +380,6 @@ impl FromStr for Mark {
         } else {
             return Err(ParseResultError::InvalidModule);
         }
-    }
-}
-
-impl CellType for Mark {}
-
-/// The status of the module taken by the student.
-///
-/// The [`ModuleStatus`] colour code is as folows:
-///
-/// Orange (255, 255, 235, 156) => Component Fail (CF)
-///
-/// Green (255, 198, 235, 156) or (255, 198, 239, 206) => Soft Fail
-/// (SF)
-///
-/// Red (255, 255, 199, 206) => Hard Fail (HF)
-#[derive(Clone, Debug, Deserialize, PartialEq)]
-pub enum ModuleStatus {
-    /// The student passes the module (No Fill).
-    Pass,
-    /// The student soft-failed the module (Green).
-    SoftFail,
-    /// The student hard-failed the module (Red).
-    HardFail,
-    /// The student component-failed the module (Orange).
-    ComponentFail,
-}
-
-impl Default for ModuleStatus {
-    fn default() -> Self {
-        Self::Pass
     }
 }
 
@@ -526,16 +427,5 @@ impl TryFrom<&ColourValue> for ModuleStatus {
         } else {
             Err(ParseResultError::InvalidModule)
         }
-    }
-}
-
-impl ToSql for ModuleStatus {
-    fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput<'_>> {
-        Ok(match self {
-            ModuleStatus::Pass => ToSqlOutput::Borrowed("Pass".into()),
-            ModuleStatus::SoftFail => ToSqlOutput::Borrowed("SF".into()),
-            ModuleStatus::HardFail => ToSqlOutput::Borrowed("HF".into()),
-            ModuleStatus::ComponentFail => ToSqlOutput::Borrowed("CF".into()),
-        })
     }
 }

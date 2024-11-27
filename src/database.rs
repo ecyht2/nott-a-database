@@ -1,7 +1,18 @@
 //! Implementation for inserting data into the database.
-use rusqlite::{params, Connection, Transaction};
+use rusqlite::{params, types::ToSqlOutput, Connection, ToSql, Transaction};
 
-use crate::{StudentInfo, StudentResult};
+use crate::{ModuleStatus, StudentInfo, StudentResult};
+
+impl ToSql for ModuleStatus {
+    fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput<'_>> {
+        Ok(match self {
+            ModuleStatus::Pass => ToSqlOutput::Borrowed("Pass".into()),
+            ModuleStatus::SoftFail => ToSqlOutput::Borrowed("SF".into()),
+            ModuleStatus::HardFail => ToSqlOutput::Borrowed("HF".into()),
+            ModuleStatus::ComponentFail => ToSqlOutput::Borrowed("CF".into()),
+        })
+    }
+}
 
 /// Insert [`StudentResult`] into a database using a database connection.
 pub fn insert_student_result(

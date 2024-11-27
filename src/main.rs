@@ -49,7 +49,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Parse result raw data
     for file in args.data.result {
-        let data = StudentResult::from_workbook(file)?;
+        let data = StudentResult::from_result(file)?;
         insert_student_result_transaction(&trans, &data)?;
     }
 
