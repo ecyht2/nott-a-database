@@ -63,8 +63,8 @@ CREATE TABLE "Mark" (
 
 -- "Result" definition
 CREATE TABLE "Result" (
-	ID INTEGER NOT NULL,
 	AcademicYear TEXT NOT NULL,
+	ID INTEGER NOT NULL,
 	YearOfStudy INTEGER NOT NULL,
 	AutumnCredits INTEGER,
 	AutumnMean REAL,

@@ -72,14 +72,14 @@ pub fn insert_student_result_transaction(
 
     for result in data {
         insert_student.execute(params![
-            result.id,
-            result.first_name,
-            result.last_name,
-            result.plan,
+            result.student_info.id,
+            result.student_info.first_name,
+            result.student_info.last_name,
+            result.student_info.plan,
         ])?;
 
         insert_result.insert(params![
-            result.id,
+            result.student_info.id,
             "2024/2025",
             result.year_of_program,
             result.autumn_credit,
@@ -106,7 +106,7 @@ pub fn insert_student_result_transaction(
             };
 
             insert_mark.insert(params![
-                result.id,
+                result.student_info.id,
                 module.code,
                 module.mark,
                 module.status,

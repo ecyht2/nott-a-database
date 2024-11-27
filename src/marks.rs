@@ -17,27 +17,25 @@ pub enum ResultHeaders {
     /// The student ID of the student.
     Id,
     /// The last name of the student.
-    FirstName,
-    /// The last name of the student.
     LastName,
+    /// The last name of the student.
+    FirstName,
     /// The first name of the student.
     Plan,
     /// The progression status of the student, e.g. requires retake.
     YearOfProgram,
-    /// The progression status of the student, e.g. requires retake.
-    Progression,
     /// The amount of credits taken by the student in the Autumn Semester.
     AutumnCredit,
     /// The average/mean marks of the student in the Autumn Semester.
     AutumnMean,
-    /// The amount of credits taken by the student in the entire year.
-    SpringCredit,
-    /// The average/mean marks of the student in the entire year.
-    SpringMean,
     /// The amount of credits taken by the student in the Spring Semester.
     FullCredit,
     /// The amount of credits taken by the student in the Spring Semester.
     FullMean,
+    /// The amount of credits taken by the student in the entire year.
+    SpringCredit,
+    /// The average/mean marks of the student in the entire year.
+    SpringMean,
     /// The amount of credits taken by the student in the entire year.
     YearCredit,
     /// The average/mean marks of the student in the entire year.
@@ -50,6 +48,8 @@ pub enum ResultHeaders {
     CreditsL4Lt40,
     /// Credits (L4) 40-49
     CreditsL44049,
+    /// The progression status of the student, e.g. requires retake.
+    Progression,
     /// All the marks of the modules taken by the student.
     Modules,
     /// Remarks regardding the students result.
@@ -186,26 +186,25 @@ impl StudentResult {
         for (col, (header, data)) in headers.iter().zip(row).enumerate() {
             match header {
                 ResultHeaders::No => output.no = data.as_i64(),
-                ResultHeaders::Id => output.id = data.as_i64().ok_or(ParseResultError::InvalidID)?,
-                ResultHeaders::FirstName => {
-                    output.first_name =
-                        data.as_string().ok_or(ParseResultError::InvalidFirstName)?
+                ResultHeaders::Id => {
+                    output.student_info.id = data.as_i64().ok_or(ParseResultError::InvalidID)?
                 }
                 ResultHeaders::LastName => {
-                    output.last_name = data.as_string().ok_or(ParseResultError::InvalidLastName)?
+                    output.student_info.last_name =
+                        data.as_string().ok_or(ParseResultError::InvalidLastName)?
+                }
+                ResultHeaders::FirstName => {
+                    output.student_info.first_name =
+                        data.as_string().ok_or(ParseResultError::InvalidFirstName)?
                 }
                 ResultHeaders::Plan => {
-                    output.plan = data.as_string().ok_or(ParseResultError::InvalidPlan)?
+                    output.student_info.plan =
+                        data.as_string().ok_or(ParseResultError::InvalidPlan)?
                 }
                 ResultHeaders::YearOfProgram => {
                     output.year_of_program = data
                         .as_string()
                         .ok_or(ParseResultError::InvalidYearOfProgram)?
-                }
-                ResultHeaders::Progression => {
-                    output.progression = data
-                        .as_string()
-                        .ok_or(ParseResultError::InvalidProgression)?
                 }
                 ResultHeaders::AutumnCredit => output.autumn_credit = data.as_f64(),
                 ResultHeaders::AutumnMean => output.autumn_mean = data.as_f64(),
@@ -219,6 +218,11 @@ impl StudentResult {
                 ResultHeaders::CreditsL33039 => output.credits_l3_30_39 = data.as_f64(),
                 ResultHeaders::CreditsL4Lt40 => output.credits_l4_lt40 = data.as_f64(),
                 ResultHeaders::CreditsL44049 => output.credits_l4_40_49 = data.as_f64(),
+                ResultHeaders::Progression => {
+                    output.progression = data
+                        .as_string()
+                        .ok_or(ParseResultError::InvalidProgression)?
+                }
                 ResultHeaders::Modules => {
                     if data.is_empty() {
                         continue;
@@ -342,8 +346,14 @@ impl StudentResult {
 
         let mut data = vec![];
         for (name, sheet) in excel.worksheets() {
-            let mut sheet_data =
-                Self::from_result_worksheet(&name, sheet, &file, &workbook, &relationship, &styles)?;
+            let mut sheet_data = Self::from_result_worksheet(
+                &name,
+                sheet,
+                &file,
+                &workbook,
+                &relationship,
+                &styles,
+            )?;
             data.append(&mut sheet_data);
         }
 

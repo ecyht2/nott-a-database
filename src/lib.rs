@@ -124,18 +124,10 @@ impl Default for ModuleStatus {
 pub struct StudentResult {
     /// The entry number in the sheet.
     pub no: Option<i64>,
-    /// The student ID of the student.
-    pub id: i64,
-    /// The last name of the student.
-    pub last_name: String,
-    /// The first name of the student.
-    pub first_name: String,
-    /// The course plan the student is studying.
-    pub plan: String,
+    /// The information about the student.
+    pub student_info: StudentInfo,
     /// The year of studies of the student.
     pub year_of_program: String,
-    /// The progression status of the student, e.g. requires retake.
-    pub progression: String,
     /// The amount of credits taken by the student in the Autumn Semester.
     pub autumn_credit: Option<f64>,
     /// The average/mean marks of the student in the Autumn Semester.
@@ -160,6 +152,8 @@ pub struct StudentResult {
     pub credits_l4_lt40: Option<f64>,
     /// The number of credits that has mark between 40-49.
     pub credits_l4_40_49: Option<f64>,
+    /// The progression status of the student, e.g. requires retake.
+    pub progression: String,
     /// All the marks of the modules taken by the student.
     pub modules: Vec<Mark>,
     /// Remarks regardding the students result.
