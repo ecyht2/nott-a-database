@@ -32,6 +32,9 @@ struct RawData {
     /// Specify (can specify multiple) award report (0B) raw data to parse.
     #[arg(long)]
     award: Vec<PathBuf>,
+    /// Specify (can specify multiple) August resit report (0D) raw data to parse.
+    #[arg(long)]
+    resit_aug: Vec<PathBuf>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -50,6 +53,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Parse result raw data
     for file in args.data.result {
         let data = StudentResult::from_result(file)?;
+        insert_student_result_transaction(&trans, &data)?;
+    }
+
+    // Parse resit raw data
+    for file in args.data.resit_aug {
+        let data = StudentResult::from_resit_aug(file)?;
         insert_student_result_transaction(&trans, &data)?;
     }
 

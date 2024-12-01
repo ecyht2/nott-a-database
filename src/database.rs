@@ -49,7 +49,8 @@ pub fn insert_student_result_transaction(
     )?;
     let mut insert_mark = trans.prepare(
         "INSERT INTO Mark
-         (ID, Module, Mark, Status, Fill) VALUES (?1, ?2, ?3, ?4, ?5)",
+         (ID, Module, Mark, Retake1, Retake2, Status, Fill)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
     )?;
     let mut colour_insert = trans.prepare(
         "
@@ -109,6 +110,8 @@ pub fn insert_student_result_transaction(
                 result.student_info.id,
                 module.code,
                 module.mark,
+                module.retake1,
+                module.retake2,
                 module.status,
                 colour_id
             ])?;

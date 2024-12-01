@@ -1,11 +1,12 @@
 //! Parser for raw data from exam results.
 
-pub mod award;
 pub mod database;
 pub mod errors;
 pub mod spreadsheet_ml;
 
+mod award;
 mod marks;
+mod resit;
 
 use chrono::NaiveDateTime;
 use serde::Deserialize;
@@ -89,6 +90,10 @@ pub struct Mark {
     pub fill: Option<ColourValue>,
     /// The first result of the user taken from the student.
     pub mark: f64,
+    /// The second result of the user taken from the student.
+    pub retake1: Option<f64>,
+    /// The third result of the user taken from the student.
+    pub retake2: Option<f64>,
 }
 
 /// The status of the module taken by the student.

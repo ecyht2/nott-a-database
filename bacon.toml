@@ -10,6 +10,8 @@ command = [
     "./sample_0A.xlsx",
     "--award",
     "./sample_0B.xlsx",
+    "--resit-aug",
+    "./sample_0D.xlsx",
 ]
 need_stdout = true
 
