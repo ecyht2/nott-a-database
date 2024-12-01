@@ -370,7 +370,7 @@ impl Iterator for ChainPermutation<'_> {
 /// ```rust
 /// use nott_a_database::spreadsheet_ml::{get_data, Styles};
 ///
-/// let styles: Styles = get_data("./data.xlsx", "xl/styles.xml").expect("Unable to find file");
+/// let styles: Styles = get_data("./sample_0A.xlsx", "xl/styles.xml").expect("Unable to find file");
 /// println!("{:?}", styles);
 /// ```
 pub fn get_data<T: for<'a> Deserialize<'a> + Debug, P: AsRef<Path>>(
