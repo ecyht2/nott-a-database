@@ -6,7 +6,8 @@ pub mod spreadsheet_ml;
 
 mod award;
 mod marks;
-mod resit;
+mod resit_aug;
+mod resit_may;
 
 use chrono::NaiveDateTime;
 use serde::Deserialize;

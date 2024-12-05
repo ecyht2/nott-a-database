@@ -15,6 +15,8 @@
                 "./sample_0A.xlsx",
                 "--award",
                 "./sample_0B.xlsx",
+                "--resit-may",
+                "./sample_0C.xlsx",
                 "--resit-aug",
                 "./sample_0D.xlsx"
             ]
