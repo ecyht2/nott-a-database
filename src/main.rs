@@ -55,25 +55,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Parse result raw data
     for file in args.data.result {
         let data = StudentResult::from_result(file)?;
-        insert_student_result_transaction(&trans, &data)?;
+        insert_student_result_transaction(&trans, &data, &args.academic_year)?;
     }
 
     // Parse award report raw data
     for file in args.data.award {
         let data = StudentInfo::from_award(file)?;
-        insert_student_info_transaction(&data, &trans)?;
+        insert_student_info_transaction(&data, &trans, &args.academic_year, true)?;
     }
 
     // Parse May resit raw data
     for file in args.data.resit_may {
         let data = StudentResult::from_resit_may(file)?;
-        insert_student_result_transaction(&trans, &data)?;
+        insert_student_result_transaction(&trans, &data, &args.academic_year)?;
     }
 
     // Parse August resit raw data
     for file in args.data.resit_aug {
         let data = StudentResult::from_resit_aug(file)?;
-        insert_student_result_transaction(&trans, &data)?;
+        insert_student_result_transaction(&trans, &data, &args.academic_year)?;
     }
 
     trans.commit()?;

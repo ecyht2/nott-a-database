@@ -46,9 +46,10 @@ impl ToSql for ModuleStatus {
 pub fn insert_student_result(
     conn: &mut Connection,
     data: &[StudentResult],
+    intake: &AcademicYear,
 ) -> Result<(), rusqlite::Error> {
     let trans = conn.transaction()?;
-    insert_student_result_transaction(&trans, data)?;
+    insert_student_result_transaction(&trans, data, intake)?;
     trans.commit()?;
     Ok(())
 }
@@ -58,6 +59,7 @@ pub fn insert_student_result(
 pub fn insert_student_result_transaction(
     trans: &Transaction,
     data: &[StudentResult],
+    intake: &AcademicYear,
 ) -> Result<(), rusqlite::Error> {
     let mut insert_result = trans.prepare(
         "INSERT INTO Result
@@ -69,7 +71,7 @@ pub fn insert_student_result_transaction(
     )?;
     let mut insert_student = trans.prepare(
         "INSERT OR IGNORE INTO StudentInfo
-         (ID, FirstName, LastName, Plan) VALUES (?1, ?2, ?3, ?4)",
+         (ID, FirstName, LastName, Plan, IntakeYear) VALUES (?1, ?2, ?3, ?4, ?5)",
     )?;
     let mut insert_module = trans.prepare(
         "INSERT OR IGNORE INTO Module
@@ -105,11 +107,12 @@ pub fn insert_student_result_transaction(
             result.student_info.first_name,
             result.student_info.last_name,
             result.student_info.plan,
+            intake,
         ])?;
 
         insert_result.insert(params![
             result.student_info.id,
-            "2024/2025",
+            intake,
             result.year_of_program,
             result.autumn_credit,
             result.autumn_mean,
@@ -172,7 +175,9 @@ impl StudentInfo {
             DegreeAward,
             Selected,
             ExceptionData,
-            Recommendation
+            Recommendation,
+            IntakeYear,
+            GraduationYear
         )
         VALUES (
             ?1,
@@ -194,7 +199,9 @@ impl StudentInfo {
             ?17,
             ?18,
             ?19,
-            ?20
+            ?20,
+            ?21,
+            ?22
         )
         ON CONFLICT DO UPDATE SET
         FirstName=?2,
@@ -215,20 +222,31 @@ impl StudentInfo {
         DegreeAward=?17,
         Selected=?18,
         ExceptionData=?19,
-        Recommendation=?20
+        Recommendation=?20,
+        GraduationYear=?22
         ";
 
     /// Insert [`StudentInfo`] into a database using a database connection.
-    pub fn insert_db_sync(&self, conn: &mut Connection) -> Result<(), rusqlite::Error> {
+    pub fn insert_db_sync(
+        &self,
+        conn: &mut Connection,
+        intake: &AcademicYear,
+        award: bool,
+    ) -> Result<(), rusqlite::Error> {
         let trans = conn.transaction()?;
-        self.insert_db_transaction_sync(&trans)?;
+        self.insert_db_transaction_sync(&trans, intake, award)?;
         trans.commit()?;
         Ok(())
     }
 
     /// Insert [`StudentInfo`] into database using a database transaction.
     /// *Note*: This function does not commit the changes to the database.
-    pub fn insert_db_transaction_sync(&self, trans: &Transaction) -> Result<(), rusqlite::Error> {
+    pub fn insert_db_transaction_sync(
+        &self,
+        trans: &Transaction,
+        intake: &AcademicYear,
+        award: bool,
+    ) -> Result<(), rusqlite::Error> {
         trans.execute(
             Self::INSERT_STATEMENT,
             params![
@@ -253,6 +271,8 @@ impl StudentInfo {
                 self.selected,
                 self.exception_data,
                 self.recommendation,
+                intake,
+                if award { Some(intake) } else { None }
             ],
         )?;
 
@@ -264,9 +284,11 @@ impl StudentInfo {
 pub fn insert_student_info(
     data: &[StudentInfo],
     conn: &mut Connection,
+    intake: &AcademicYear,
+    award: bool,
 ) -> Result<(), rusqlite::Error> {
     let trans = conn.transaction()?;
-    insert_student_info_transaction(data, &trans)?;
+    insert_student_info_transaction(data, &trans, intake, award)?;
     trans.commit()?;
     Ok(())
 }
@@ -276,9 +298,11 @@ pub fn insert_student_info(
 pub fn insert_student_info_transaction(
     data: &[StudentInfo],
     trans: &Transaction,
+    intake: &AcademicYear,
+    award: bool,
 ) -> Result<(), rusqlite::Error> {
     for info in data {
-        info.insert_db_transaction_sync(trans)?;
+        info.insert_db_transaction_sync(trans, intake, award)?;
     }
 
     Ok(())

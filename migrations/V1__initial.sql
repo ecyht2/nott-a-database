@@ -26,7 +26,11 @@ CREATE TABLE "StudentInfo" (
     Selected INTEGER,
     ExceptionData TEXT,
     Recommendation TEXT,
-	PRIMARY KEY("ID")
+    IntakeYear TEXT NOT NULL,
+    GraduationYear TEXT,
+	PRIMARY KEY("ID"),
+	CONSTRAINT FK_intake FOREIGN KEY (IntakeYear) REFERENCES "AcademicYear"(AcademicYear),
+	CONSTRAINT FK_graduation_year FOREIGN KEY (GraduationYear) REFERENCES "AcademicYear"(AcademicYear)
 );
 
 -- Module definition
