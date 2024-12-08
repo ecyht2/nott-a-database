@@ -10,6 +10,7 @@
                 "--color",
                 "always",
                 "--",
+                "2024/2025",
                 "./test.db",
                 "--result",
                 "./sample_0A.xlsx",

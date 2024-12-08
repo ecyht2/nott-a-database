@@ -1,13 +1,13 @@
 //! Simple CLI to parse the raw data and store it into the database.
-use std::path::PathBuf;
+use std::{path::PathBuf, str::FromStr};
 
 use clap::Parser;
 use refinery::embed_migrations;
-use rusqlite::{params, Connection};
+use rusqlite::Connection;
 
 use nott_a_database::{
     database::{insert_student_info_transaction, insert_student_result_transaction},
-    StudentInfo, StudentResult,
+    AcademicYear, StudentInfo, StudentResult,
 };
 
 embed_migrations!("./migrations");
@@ -15,6 +15,9 @@ embed_migrations!("./migrations");
 /// Simple CLI to parse the raw data and store it into the database.
 #[derive(Debug, Parser)]
 struct Arg {
+    /// The acdemic year of the reports.
+    #[clap(value_parser = AcademicYear::from_str)]
+    academic_year: AcademicYear,
     /// The database file to save to.
     datbase: PathBuf,
     /// List of raw data file to parse.
@@ -46,11 +49,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut conn = Connection::open(args.datbase)?;
     conn.pragma(None, "foreign_keys", 1, |_| Ok(()))?;
     migrations::runner().run(&mut conn)?;
-    conn.execute(
-        "INSERT OR IGNORE INTO AcademicYear
-         (AcademicYear) VALUES (?1)",
-        params!["2024/2025"],
-    )?;
+    args.academic_year.insert_db_sync(&mut conn)?;
     let trans = conn.transaction()?;
 
     // Parse result raw data

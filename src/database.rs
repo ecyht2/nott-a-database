@@ -1,7 +1,35 @@
 //! Implementation for inserting data into the database.
 use rusqlite::{params, types::ToSqlOutput, Connection, ToSql, Transaction};
 
-use crate::{ModuleStatus, StudentInfo, StudentResult};
+use crate::{AcademicYear, ModuleStatus, StudentInfo, StudentResult};
+
+impl ToSql for AcademicYear {
+    fn to_sql(&self) -> rusqlite::Result<ToSqlOutput<'_>> {
+        Ok(ToSqlOutput::Owned(self.to_string().into()))
+    }
+}
+
+impl AcademicYear {
+    pub const INSERT_STATEMENT: &str = "
+        INSERT OR IGNORE INTO AcademicYear
+        VALUES (?1)
+        ";
+
+    /// Add a new [`AcademicYear`] into database using a database connection.
+    pub fn insert_db_sync(&self, conn: &mut Connection) -> Result<(), rusqlite::Error> {
+        let trans = conn.transaction()?;
+        self.insert_db_transaction_sync(&trans)?;
+        trans.commit()?;
+        Ok(())
+    }
+
+    /// Add a new [`AcademicYear`] into database using a database transaction.
+    /// *Note*: This function does not commit the changes to the database.
+    pub fn insert_db_transaction_sync(&self, trans: &Transaction) -> Result<(), rusqlite::Error> {
+        trans.execute(Self::INSERT_STATEMENT, params![self])?;
+        Ok(())
+    }
+}
 
 impl ToSql for ModuleStatus {
     fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput<'_>> {

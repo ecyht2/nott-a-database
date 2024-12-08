@@ -9,8 +9,100 @@ mod marks;
 mod resit_aug;
 mod resit_may;
 
+use std::{fmt::Display, str::FromStr};
+
 use chrono::NaiveDateTime;
 use serde::Deserialize;
+
+/// A struct representing an academic year.
+///
+/// The default [`AcademicYear`] is set to the first batch of student in
+/// Nottingham Malaysia at September 2000 (2000/2001).
+///
+/// # Examples
+///
+/// ```rust
+/// use nott_a_database::AcademicYear;
+///
+/// // Create a new default AcademicYear (2000/20001) the first batch of
+/// // students in Nottingham Malaysia.
+/// let year = AcademicYear::default();
+/// assert_eq!(year.to_string(), "2000/2001");
+///
+/// // Create a custom AcademicYear
+/// let year = AcademicYear::new(2024);
+/// assert_eq!(year.to_string(), "2024/2025");
+/// ```
+#[derive(Clone, Debug, Deserialize)]
+pub struct AcademicYear {
+    start: isize,
+    end: isize,
+}
+
+impl AcademicYear {
+    /// Creates a new [`AcademicYear`] from the start of the semester.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use nott_a_database::AcademicYear;
+    ///
+    /// let year = AcademicYear::new(2024);
+    /// assert_eq!(year.to_string(), "2024/2025");
+    /// ```
+    pub fn new(start: isize) -> Self {
+        Self {
+            start,
+            end: start + 1,
+        }
+    }
+}
+
+impl Default for AcademicYear {
+    /// Create the default struct of [`AcademicYear`].
+    ///
+    /// The default is base on the initial batch of student in September 2000.
+    fn default() -> Self {
+        Self {
+            start: 2000,
+            end: 2001,
+        }
+    }
+}
+
+impl FromStr for AcademicYear {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let numbers: Vec<&str> = s.split("/").collect();
+
+        if numbers.len() != 2 {
+            return Err(String::from(
+                "The academic year should be only two numbers sperated by \"/\"",
+            ));
+        }
+
+        let numbers: Vec<isize> = numbers
+            .into_iter()
+            .map(|s| s.parse::<isize>().map_err(|e| e.to_string()))
+            .collect::<Result<_, _>>()?;
+
+        let start = numbers[0];
+        let end = numbers[1];
+
+        if end != start + 1 {
+            Err(format!("The end of the academic year should be one year later than the start. Expected: {}, Found: {}", start + 1, end))
+        } else {
+            Ok(Self::new(start))
+        }
+    }
+}
+
+impl Display for AcademicYear {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}/{}", self.start, self.end)
+    }
+}
 
 /// Information about a student.
 #[derive(Debug, Default, Deserialize)]
