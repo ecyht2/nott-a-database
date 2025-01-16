@@ -43,7 +43,7 @@ struct RawData {
     resit_aug: Vec<PathBuf>,
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), anyhow::Error> {
     let args = Arg::parse();
 
     let mut conn = Connection::open(args.datbase)?;

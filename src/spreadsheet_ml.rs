@@ -11,7 +11,7 @@ use quick_xml::de::from_str;
 use serde::{de::Visitor, Deserialize};
 use zip::ZipArchive;
 
-use crate::ColourValue;
+use crate::{errors::ParseStyleError, ColourValue};
 
 /// The `Styles Part` in the workbook.
 #[derive(Debug, Deserialize)]
@@ -83,7 +83,7 @@ where
 /// Custom visitor for parsing [`ColourValue`] from an 8 digit hexadecimal string value.
 struct HexVisitor;
 
-impl<'de> Visitor<'de> for HexVisitor {
+impl Visitor<'_> for HexVisitor {
     type Value = ColourValue;
 
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -376,14 +376,18 @@ impl Iterator for ChainPermutation<'_> {
 pub fn get_data<T: for<'a> Deserialize<'a> + Debug, P: AsRef<Path>>(
     file: P,
     archive_file: &str,
-) -> Result<T, Box<dyn std::error::Error>> {
-    let file = File::open(file)?;
-    let mut archive = ZipArchive::new(file)?;
+) -> Result<T, ParseStyleError> {
+    let file = File::open(file).map_err(ParseStyleError::WorkbookError)?;
+    let mut archive = ZipArchive::new(file).map_err(ParseStyleError::ArchiveError)?;
 
-    let mut archive_file = archive.by_name(archive_file)?;
+    let mut archive_file = archive
+        .by_name(archive_file)
+        .map_err(ParseStyleError::ArchiveError)?;
     let mut file_content = String::new();
-    archive_file.read_to_string(&mut file_content)?;
+    archive_file
+        .read_to_string(&mut file_content)
+        .map_err(ParseStyleError::ReadArchiveError)?;
 
-    let output: T = from_str(&file_content)?;
+    let output: T = from_str(&file_content).map_err(ParseStyleError::DeserialiseError)?;
     Ok(output)
 }

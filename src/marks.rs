@@ -4,7 +4,7 @@ use std::{path::Path, str::FromStr};
 use calamine::{open_workbook, Data, DataType, Range, Reader, Xlsx};
 
 use crate::{
-    errors::{InvalidHeader, ParseResultError},
+    errors::{ParseResultError, ParseResultRowError},
     spreadsheet_ml::{get_data, Relationships, SheetRow, Styles, Workbook, Worksheet, XlsxColumns},
     ColourValue, Mark, ModuleStatus, StudentResult,
 };
@@ -61,7 +61,7 @@ impl ResultHeaders {
     pub fn get_headers(
         headers: &[String],
         sub_headers: &[String],
-    ) -> Result<Vec<ResultHeaders>, InvalidHeader> {
+    ) -> Result<Vec<ResultHeaders>, ParseResultError> {
         /// All the possible status when parsing the headers of the raw data.
         ///
         /// The status determine what the next header should be based on the sub-headers.
@@ -142,7 +142,7 @@ impl ResultHeaders {
 }
 
 impl FromStr for ResultHeaders {
-    type Err = InvalidHeader;
+    type Err = ParseResultError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -167,7 +167,7 @@ impl FromStr for ResultHeaders {
             "progression" => Ok(Self::Progression),
             "modules" => Ok(Self::Modules),
             "remarks" => Ok(Self::Remarks),
-            _ => Err(InvalidHeader(s.to_owned())),
+            _ => Err(ParseResultError::InvalidHeader(s.to_owned())),
         }
     }
 }
@@ -180,31 +180,33 @@ impl StudentResult {
         row_no: usize,
         styles: &Styles,
         row_data: &SheetRow,
-    ) -> Result<Self, ParseResultError> {
+    ) -> Result<Self, ParseResultRowError> {
         let mut output = Self::new();
 
         for (col, (header, data)) in headers.iter().zip(row).enumerate() {
             match header {
                 ResultHeaders::No => output.no = data.as_i64(),
                 ResultHeaders::Id => {
-                    output.student_info.id = data.as_i64().ok_or(ParseResultError::InvalidID)?
+                    output.student_info.id = data.as_i64().ok_or(ParseResultRowError::InvalidID)?
                 }
                 ResultHeaders::LastName => {
-                    output.student_info.last_name =
-                        data.as_string().ok_or(ParseResultError::InvalidLastName)?
+                    output.student_info.last_name = data
+                        .as_string()
+                        .ok_or(ParseResultRowError::InvalidLastName)?
                 }
                 ResultHeaders::FirstName => {
-                    output.student_info.first_name =
-                        data.as_string().ok_or(ParseResultError::InvalidFirstName)?
+                    output.student_info.first_name = data
+                        .as_string()
+                        .ok_or(ParseResultRowError::InvalidFirstName)?
                 }
                 ResultHeaders::Plan => {
                     output.student_info.plan =
-                        data.as_string().ok_or(ParseResultError::InvalidPlan)?
+                        data.as_string().ok_or(ParseResultRowError::InvalidPlan)?
                 }
                 ResultHeaders::YearOfProgram => {
                     output.year_of_program = data
                         .as_string()
-                        .ok_or(ParseResultError::InvalidYearOfProgram)?
+                        .ok_or(ParseResultRowError::InvalidYearOfProgram)?
                 }
                 ResultHeaders::AutumnCredit => output.autumn_credit = data.as_f64(),
                 ResultHeaders::AutumnMean => output.autumn_mean = data.as_f64(),
@@ -221,13 +223,13 @@ impl StudentResult {
                 ResultHeaders::Progression => {
                     output.progression = data
                         .as_string()
-                        .ok_or(ParseResultError::InvalidProgression)?
+                        .ok_or(ParseResultRowError::InvalidProgression)?
                 }
                 ResultHeaders::Modules => {
                     if data.is_empty() {
                         continue;
                     }
-                    let tmp = data.as_string().ok_or(ParseResultError::InvalidModule)?;
+                    let tmp = data.as_string().ok_or(ParseResultRowError::InvalidModule)?;
                     let mut tmp = Mark::from_str(&tmp)?;
 
                     let col_name = XlsxColumns::new()
@@ -242,7 +244,7 @@ impl StudentResult {
                     let style_id: usize = cell
                         .style
                         .parse()
-                        .map_err(|_| ParseResultError::InvalidModule)?;
+                        .map_err(|_| ParseResultRowError::InvalidModule)?;
                     let fill_id = styles.cell_xfs.xf[style_id].fill_id;
                     let fill = &styles.fills.fill[fill_id];
 
@@ -267,7 +269,7 @@ impl StudentResult {
         workbook: &Workbook,
         relationship: &Relationships,
         styles: &Styles,
-    ) -> Result<Vec<StudentResult>, Box<dyn std::error::Error>> {
+    ) -> Result<Vec<StudentResult>, ParseResultError> {
         // Extract worksheet and relationship metadata
         let worksheet = workbook
             .sheets
@@ -304,16 +306,19 @@ impl StudentResult {
             worksheet_path
                 .to_str()
                 .expect("Invalid path in Workbook archive."),
-        )?;
+        )
+        .map_err(ParseResultError::StyleError)?;
 
         // Getting Headers and Subheaders
         let headers = range
             .headers()
-            .ok_or("Invalid workbook given, the first row of data must be the headers")?;
+            .ok_or("Invalid workbook given, the first row of data must be the headers")
+            .map_err(|_| ParseResultError::NoHeaders)?;
         let sub_headers = range
             .range((1, 0), range.end().unwrap())
             .headers()
-            .ok_or("Invalid workbook given, the second row of data must be the sub-headers")?;
+            .ok_or("Invalid workbook given, the second row of data must be the sub-headers")
+            .map_err(|_| ParseResultError::NoSubheaders)?;
         let headers = ResultHeaders::get_headers(&headers, &sub_headers)?;
 
         let data: Vec<StudentResult> = range
@@ -328,6 +333,7 @@ impl StudentResult {
                     styles,
                     &sheet.sheet_data.row[row_no],
                 )
+                .map_err(|e| ParseResultError::InvalidRow(row_no + 1, e))
             })
             .collect::<Result<_, ParseResultError>>()?;
 
@@ -335,14 +341,15 @@ impl StudentResult {
     }
 
     /// Extract all the student from a result report (0A) workbook.
-    pub fn from_result<P: AsRef<Path>>(
-        file: P,
-    ) -> Result<Vec<StudentResult>, Box<dyn std::error::Error>> {
-        let mut excel: Xlsx<_> = open_workbook(&file).map_err(|_| "Unable to find workbook")?;
+    pub fn from_result<P: AsRef<Path>>(file: P) -> Result<Vec<StudentResult>, ParseResultError> {
+        let mut excel: Xlsx<_> = open_workbook(&file).map_err(ParseResultError::WorkbookError)?;
 
-        let styles: Styles = get_data(&file, "xl/styles.xml")?;
-        let workbook: Workbook = get_data(&file, "xl/workbook.xml")?;
-        let relationship: Relationships = get_data(&file, "xl/_rels/workbook.xml.rels")?;
+        let styles: Styles =
+            get_data(&file, "xl/styles.xml").map_err(ParseResultError::StyleError)?;
+        let workbook: Workbook =
+            get_data(&file, "xl/workbook.xml").map_err(ParseResultError::StyleError)?;
+        let relationship: Relationships =
+            get_data(&file, "xl/_rels/workbook.xml.rels").map_err(ParseResultError::StyleError)?;
 
         let mut data = vec![];
         for (name, sheet) in excel.worksheets() {
@@ -362,7 +369,7 @@ impl StudentResult {
 }
 
 impl FromStr for Mark {
-    type Err = ParseResultError;
+    type Err = ParseResultRowError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let data: Vec<&str> = s.split("\r\n").filter(|s| !s.is_empty()).collect();
@@ -370,7 +377,7 @@ impl FromStr for Mark {
         if data.len() == 3 {
             let code = data[0].to_owned() + data[1];
             let credit = 10;
-            let mark = f64::from_str(data[2]).map_err(|_| ParseResultError::InvalidModule)?;
+            let mark = f64::from_str(data[2]).map_err(|_| ParseResultRowError::InvalidModule)?;
             Ok(Mark {
                 code,
                 credit,
@@ -379,8 +386,8 @@ impl FromStr for Mark {
             })
         } else if data.len() == 4 {
             let code = data[0].to_owned() + data[1];
-            let credit = i64::from_str(data[2]).map_err(|_| ParseResultError::InvalidModule)?;
-            let mark = f64::from_str(data[3]).map_err(|_| ParseResultError::InvalidModule)?;
+            let credit = i64::from_str(data[2]).map_err(|_| ParseResultRowError::InvalidModule)?;
+            let mark = f64::from_str(data[3]).map_err(|_| ParseResultRowError::InvalidModule)?;
             Ok(Mark {
                 code,
                 credit,
@@ -388,13 +395,13 @@ impl FromStr for Mark {
                 ..Default::default()
             })
         } else {
-            return Err(ParseResultError::InvalidModule);
+            return Err(ParseResultRowError::InvalidModule);
         }
     }
 }
 
 impl TryFrom<ColourValue> for ModuleStatus {
-    type Error = ParseResultError;
+    type Error = ParseResultRowError;
 
     /// Get the [`ModuleStatus`] base on the fill colour of the cell.
     ///
@@ -405,7 +412,7 @@ impl TryFrom<ColourValue> for ModuleStatus {
 }
 
 impl TryFrom<&ColourValue> for ModuleStatus {
-    type Error = ParseResultError;
+    type Error = ParseResultRowError;
 
     /// Get the [`ModuleStatus`] base on the fill colour of the cell.
     ///
@@ -419,7 +426,7 @@ impl TryFrom<&ColourValue> for ModuleStatus {
     /// Red (255, 255, 199, 206) => Hard Fail (HF)
     fn try_from(value: &ColourValue) -> Result<Self, Self::Error> {
         if value.alpha != 255 {
-            return Err(ParseResultError::InvalidModule);
+            return Err(ParseResultRowError::InvalidModule);
         }
 
         if value.red == 255 && value.green == 235 && value.blue == 156 {
@@ -435,7 +442,7 @@ impl TryFrom<&ColourValue> for ModuleStatus {
             // Red Cell => Hard Fail (HF)
             Ok(Self::HardFail)
         } else {
-            Err(ParseResultError::InvalidModule)
+            Err(ParseResultRowError::InvalidModule)
         }
     }
 }

@@ -2,10 +2,11 @@
 use std::{error::Error, fmt::Display};
 
 use calamine::XlsxError;
+use zip::result::ZipError;
 
 #[derive(Debug)]
 /// Errors when parsing a [`StudentResult`](crate::StudentResult) from the raw data.
-pub enum ParseResultError {
+pub enum ParseResultRowError {
     /// No/Invalid student ID found in data.
     InvalidID,
     /// No/Invalid student last name found in data.
@@ -22,50 +23,95 @@ pub enum ParseResultError {
     InvalidModule,
 }
 
-impl Display for ParseResultError {
+impl Display for ParseResultRowError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let output = match self {
-            ParseResultError::InvalidID => "No/Invalid student ID.",
-            ParseResultError::InvalidLastName => "No/Invalid last name.",
-            ParseResultError::InvalidFirstName => "No/Invalid first name.",
-            ParseResultError::InvalidPlan => "No/Invalid plan.",
-            ParseResultError::InvalidYearOfProgram => "No/Invalid year of program.",
-            ParseResultError::InvalidProgression => "No/Invalid progression status.",
-            ParseResultError::InvalidModule => "No/Invalid module.",
+            ParseResultRowError::InvalidID => "No/Invalid student ID.",
+            ParseResultRowError::InvalidLastName => "No/Invalid last name.",
+            ParseResultRowError::InvalidFirstName => "No/Invalid first name.",
+            ParseResultRowError::InvalidPlan => "No/Invalid plan.",
+            ParseResultRowError::InvalidYearOfProgram => "No/Invalid year of program.",
+            ParseResultRowError::InvalidProgression => "No/Invalid progression status.",
+            ParseResultRowError::InvalidModule => "No/Invalid module.",
         };
         write!(f, "{}", output)
     }
 }
 
+impl Error for ParseResultRowError {}
+
 #[derive(Debug)]
-/// Errors when parsing the raw data.
-pub enum ParseDataError {
-    /// Invalid result entry in the data.
-    InvalidResult(ParseResultError),
+pub enum ParseStyleError {
+    /// An error occured when trying to open workbook.
+    WorkbookError(std::io::Error),
+    /// An error occured when trying to open workbook zip archive.
+    ArchiveError(ZipError),
+    /// An error occured when trying to read styles workbook zip archive.
+    ReadArchiveError(std::io::Error),
+    /// An error occured when deserializing XML in styles.
+    DeserialiseError(quick_xml::DeError),
 }
 
-impl Display for ParseDataError {
+impl Display for ParseStyleError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let output = match self {
-            ParseDataError::InvalidResult(_) => "lmao",
-        };
-        write!(f, "{}", output)
+        match self {
+            ParseStyleError::WorkbookError(e) => {
+                write!(f, "Error: {e} occured when trying to opening workbook.")
+            }
+            ParseStyleError::ArchiveError(e) => {
+                write!(
+                    f,
+                    "Error: {e} occured when trying to read workbook zip archive."
+                )
+            }
+            ParseStyleError::ReadArchiveError(e) => write!(
+                f,
+                "Error: {e} occurred when trying to read styles in the workbook zip archive."
+            ),
+            ParseStyleError::DeserialiseError(e) => {
+                write!(f, "Error: {e} occurred when parsing the style XML file.")
+            }
+        }
+    }
+}
+
+impl Error for ParseStyleError {}
+
+#[derive(Debug)]
+/// Errors when parsing the result report (0A) raw data.
+pub enum ParseResultError {
+    /// An error occured when opening the row data workbook.
+    WorkbookError(XlsxError),
+    /// An error occured when parsing styles from workbook.
+    StyleError(ParseStyleError),
+    /// No headers row found in the data.
+    NoHeaders,
+    /// No subheaders row found in the data.
+    NoSubheaders,
+    /// Invalid header column found in the data.
+    InvalidHeader(String),
+    /// Invalid result entry in the data.
+    InvalidRow(usize, ParseResultRowError),
+}
+
+impl Display for ParseResultError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::WorkbookError(e) => {
+                write!(f, "Error: {e} occured when opening result report.")
+            }
+            Self::StyleError(e) => {
+                write!(f, "Error: {e} occured when parsing styles in result report")
+            }
+            Self::NoHeaders => write!(f, "Unable to find headers."),
+            Self::NoSubheaders => write!(f, "Unable to find subheaders"),
+            Self::InvalidHeader(header) => write!(f, "Invalid Header Found: {}", header),
+            Self::InvalidRow(row, err) => write!(f, "{err} at row {row}"),
+        }
     }
 }
 
 impl Error for ParseResultError {}
-
-#[derive(Debug)]
-/// Invalid header found for the data.
-pub struct InvalidHeader(pub String);
-
-impl Display for InvalidHeader {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Invalid Header Found: {}", self.0)
-    }
-}
-
-impl Error for InvalidHeader {}
 
 /// Errors when parsing a row of award report (0B) raw data.
 #[derive(Debug)]
@@ -169,6 +215,14 @@ impl Error for ParseAwardRowError {}
 /// Errors when parsing award report (0B) raw data.
 #[derive(Debug)]
 pub enum ParseAwardError {
+    /// An error occured when opening the row data workbook.
+    WorkbookError(XlsxError),
+    /// An error occured when opening the relevant worksheet in the workbook.
+    InvalidWorksheet(XlsxError),
+    /// No headers row found in the data.
+    NoHeaders,
+    /// Invalid header column found in the data.
+    InvalidHeader(String),
     /// Found an invalid row in raw data.
     InvalidRow(usize, ParseAwardRowError),
 }
@@ -176,7 +230,18 @@ pub enum ParseAwardError {
 impl Display for ParseAwardError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ParseAwardError::InvalidRow(row, err) => write!(f, "{err} at row {row}"),
+            Self::WorkbookError(e) => {
+                write!(f, "Error: {e} occured when opening award report.")
+            }
+            Self::InvalidWorksheet(e) => {
+                write!(
+                    f,
+                    "Error: {e} occurred when trying to open worksheet \"Award Report\" in the workbook."
+                )
+            }
+            Self::NoHeaders => write!(f, "Unable to find headers."),
+            Self::InvalidHeader(header) => write!(f, "Invalid Header Found: {}", header),
+            Self::InvalidRow(row, err) => write!(f, "{err} at row {row}"),
         }
     }
 }
@@ -252,7 +317,7 @@ impl Display for ParseMayResitRowError {
 
 impl Error for ParseMayResitRowError {}
 
-/// Errors when parsing August resit report (0D) raw data.
+/// Errors when parsing May resit report (0C) raw data.
 #[derive(Debug)]
 pub enum ParseMayResitError {
     /// An error occured when opening the row data workbook.
@@ -261,7 +326,7 @@ pub enum ParseMayResitError {
     InvalidWorksheet,
     /// Unable to find headers.
     NoHeaders,
-    /// Invalid headers found when parsing resit report.
+    /// Invalid headers found when parsing May resit report.
     InvalidHeaders(String),
     /// Unable to find subheaders.
     NoSubheader,
@@ -273,22 +338,22 @@ impl Display for ParseMayResitError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::WorkbookError(e) => {
-                write!(f, "Error: {e} occured when opening resit report.")
+                write!(f, "Error: {e} occured when opening May resit report.")
             }
             Self::InvalidWorksheet => {
                 write!(f, "No worksheet \"Sheet1\" found in the workbook.")
             }
             Self::NoHeaders => {
-                write!(f, "No header row found when parsing Spring resit report")
+                write!(f, "No header row found when parsing May resit report")
             }
             Self::InvalidHeaders(s) => {
                 write!(
                     f,
-                    "No/Invalid headers {s} found when spring parsing resit report"
+                    "No/Invalid headers {s} found when spring parsing May resit report"
                 )
             }
             Self::NoSubheader => {
-                write!(f, "No subheader row found when parsing spring resit report")
+                write!(f, "No subheader row found when parsing spring May resit report")
             }
             Self::InvalidDataRow(row, e) => write!(f, "{e} at data {row}"),
         }
@@ -373,7 +438,7 @@ pub enum ParseAugResitError {
     WorkbookError(XlsxError),
     /// Invalid amount of worksheets found in raw data.
     InvalidWorksheet(usize),
-    /// Invalid headers found when parsing resit report.
+    /// Invalid headers found when parsing August resit report.
     InvalidHeaders,
     /// Unable to find subheaders.
     NoSubheader,
@@ -385,19 +450,19 @@ impl Display for ParseAugResitError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::WorkbookError(e) => {
-                write!(f, "Error: {e} occured when opening resit report.")
+                write!(f, "Error: {e} occured when opening August resit report.")
             }
             Self::InvalidWorksheet(count) => {
                 write!(
                     f,
-                    "Invalid amount of worksheets found in resit report, expected 1 found {count}"
+                    "Invalid amount of worksheets found in August resit report, expected 1 found {count}"
                 )
             }
             Self::InvalidHeaders => {
-                write!(f, "No/Invalid headers found when parsing resit report")
+                write!(f, "No/Invalid headers found when parsing August resit report")
             }
             Self::NoSubheader => {
-                write!(f, "No subheader row found when parsing resit report")
+                write!(f, "No subheader row found when parsing August resit report")
             }
             Self::InvalidDataRow(row, e) => write!(f, "{e} at data {row}"),
         }

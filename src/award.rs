@@ -59,7 +59,7 @@ pub enum AwardHeader {
 }
 
 impl FromStr for AwardHeader {
-    type Err = Box<dyn std::error::Error>;
+    type Err = ParseAwardError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s {
@@ -85,7 +85,11 @@ impl FromStr for AwardHeader {
             "Exception Data" => Self::ExceptionData,
             "" => Self::Empty,
             "Recommendation" => Self::Recommendation,
-            _ => return Err("Invalid award header".into()),
+            _ => {
+                return Err(ParseAwardError::InvalidHeader(
+                    "Invalid award header".into(),
+                ))
+            }
         })
     }
 }
@@ -239,18 +243,21 @@ impl StudentInfo {
     }
 
     /// Creates [`StudentInfo`] from award report (0B) raw data.
-    pub fn from_award<P: AsRef<Path>>(file: P) -> Result<Vec<Self>, Box<dyn std::error::Error>> {
-        let mut excel: Xlsx<_> = open_workbook(&file).map_err(|_| "Unable to find workbook")?;
+    pub fn from_award<P: AsRef<Path>>(file: P) -> Result<Vec<Self>, ParseAwardError> {
+        let mut excel: Xlsx<_> =
+            open_workbook(&file).map_err(ParseAwardError::WorkbookError)?;
 
-        let award = excel.worksheet_range("Award Report")?;
+        let award = excel
+            .worksheet_range("Award Report")
+            .map_err(ParseAwardError::InvalidWorksheet)?;
 
         let headers: Vec<AwardHeader> = award
             .headers()
-            .ok_or("Awards headers missing")?
+            .ok_or(ParseAwardError::NoHeaders)?
             .iter()
             .map(String::as_str)
             .map(AwardHeader::from_str)
-            .collect::<Result<_, Box<dyn std::error::Error>>>()?;
+            .collect::<Result<_, ParseAwardError>>()?;
 
         let mut data = vec![];
         for (row_no, row) in award.rows().enumerate().skip(1) {
