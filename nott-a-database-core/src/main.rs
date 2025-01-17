@@ -5,7 +5,7 @@ use clap::Parser;
 use refinery::embed_migrations;
 use rusqlite::Connection;
 
-use nott_a_database::{
+use nott_a_database_core::{
     database::{insert_student_info_transaction, insert_student_result_transaction},
     AcademicYear, StudentInfo, StudentResult,
 };

@@ -6,7 +6,7 @@
             "type": "lldb",
             "request": "launch",
             "name": "Debug CLI",
-            "program": "${workspaceFolder}/target/debug/nott-a-database",
+            "program": "${workspaceFolder}/target/debug/nott-a-database-core",
             "args": [
                 "2024/2025",
                 "./test.db",

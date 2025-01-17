@@ -1,0 +1,9 @@
+# Program Outputs
+test.db
+
+# Rust Outputs
+/target
+
+# Nix Outputs
+/*.drv
+/result*
