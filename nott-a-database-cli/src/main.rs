@@ -10,7 +10,7 @@ use nott_a_database_core::{
     AcademicYear, StudentInfo, StudentResult,
 };
 
-embed_migrations!("./migrations");
+embed_migrations!("../nott-a-database-core/migrations");
 
 /// Simple CLI to parse the raw data and store it into the database.
 #[derive(Debug, Parser)]

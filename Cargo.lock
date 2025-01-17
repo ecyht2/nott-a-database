@@ -791,15 +791,23 @@ dependencies = [
 ]
 
 [[package]]
-name = "nott-a-database-core"
+name = "nott-a-database-cli"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "clap",
+ "nott-a-database-core",
+ "refinery",
+ "rusqlite",
+]
+
+[[package]]
+name = "nott-a-database-core"
+version = "0.1.0"
+dependencies = [
  "calamine",
  "chrono",
- "clap",
  "quick-xml 0.37.2",
- "refinery",
  "rusqlite",
  "serde",
  "zip",
