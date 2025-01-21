@@ -1,3 +1,7 @@
 [workspace]
 resolver = "2"
-members = ["nott-a-database-cli", "nott-a-database-core"]
+members = [
+    "nott-a-database-cli",
+    "nott-a-database-core",
+    "nott-a-database/src-tauri",
+]

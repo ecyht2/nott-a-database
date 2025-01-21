@@ -11,7 +11,6 @@ pkgs.mkShell {
     # Dev Tools
     clippy
     bacon
-    bun
     rust-analyzer
     rustfmt
   ];
