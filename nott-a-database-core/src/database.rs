@@ -1,8 +1,15 @@
 //! Implementation for inserting data into the database.
+#[cfg(feature = "sync")]
 use rusqlite::{params, types::ToSqlOutput, Connection, ToSql, Transaction};
 
-use crate::{AcademicYear, ModuleStatus, StudentInfo, StudentResult};
+#[cfg(feature = "async")]
+use sqlx::{Sqlite, SqlitePool, Transaction as AsyncTransaction};
 
+use crate::{AcademicYear, StudentInfo, StudentResult};
+#[cfg(feature = "sync")]
+use crate::ModuleStatus;
+
+#[cfg(feature = "sync")]
 impl ToSql for AcademicYear {
     fn to_sql(&self) -> rusqlite::Result<ToSqlOutput<'_>> {
         Ok(ToSqlOutput::Owned(self.to_string().into()))
@@ -16,6 +23,7 @@ impl AcademicYear {
         ";
 
     /// Add a new [`AcademicYear`] into database using a database connection.
+    #[cfg(feature = "sync")]
     pub fn insert_db_sync(&self, conn: &mut Connection) -> Result<(), rusqlite::Error> {
         let trans = conn.transaction()?;
         self.insert_db_transaction_sync(&trans)?;
@@ -25,24 +33,48 @@ impl AcademicYear {
 
     /// Add a new [`AcademicYear`] into database using a database transaction.
     /// *Note*: This function does not commit the changes to the database.
+    #[cfg(feature = "sync")]
     pub fn insert_db_transaction_sync(&self, trans: &Transaction) -> Result<(), rusqlite::Error> {
         trans.execute(Self::INSERT_STATEMENT, params![self])?;
         Ok(())
     }
+
+    /// Add a new [`AcademicYear`] into database using a database connection.
+    #[cfg(feature = "async")]
+    pub async fn insert_db_async(&self, conn: &mut SqlitePool) -> Result<(), sqlx::Error> {
+        let mut trans = conn.begin().await?;
+        self.insert_db_transaction_async(&mut trans).await?;
+        trans.commit().await?;
+        Ok(())
+    }
+
+    /// Add a new [`AcademicYear`] into database using a database transaction.
+    /// *Note*: This function does not commit the changes to the database.
+    #[cfg(feature = "async")]
+    pub async fn insert_db_transaction_async(
+        &self,
+        trans: &mut AsyncTransaction<'_, Sqlite>,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            "INSERT OR IGNORE INTO AcademicYear
+             VALUES (?1)",
+        )
+        .bind(self.to_string())
+        .execute(&mut **trans)
+        .await?;
+        Ok(())
+    }
 }
 
+#[cfg(feature = "sync")]
 impl ToSql for ModuleStatus {
     fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput<'_>> {
-        Ok(match self {
-            ModuleStatus::Pass => ToSqlOutput::Borrowed("Pass".into()),
-            ModuleStatus::SoftFail => ToSqlOutput::Borrowed("SF".into()),
-            ModuleStatus::HardFail => ToSqlOutput::Borrowed("HF".into()),
-            ModuleStatus::ComponentFail => ToSqlOutput::Borrowed("CF".into()),
-        })
+        Ok(ToSqlOutput::Owned(self.to_string().into()))
     }
 }
 
 /// Insert [`StudentResult`] into a database using a database connection.
+#[cfg(feature = "sync")]
 pub fn insert_student_result(
     conn: &mut Connection,
     data: &[StudentResult],
@@ -56,6 +88,7 @@ pub fn insert_student_result(
 
 /// Insert [`StudentResult`] into database using a database transaction.
 /// *Note*: This function does not commit the changes to the database.
+#[cfg(feature = "sync")]
 pub fn insert_student_result_transaction(
     trans: &Transaction,
     data: &[StudentResult],
@@ -152,6 +185,129 @@ pub fn insert_student_result_transaction(
     Ok(())
 }
 
+/// Insert [`StudentResult`] into a database using a database connection.
+#[cfg(feature = "async")]
+pub async fn insert_student_result_async(
+    conn: &mut SqlitePool,
+    data: &[StudentResult],
+    intake: &AcademicYear,
+) -> Result<(), sqlx::Error> {
+    let mut trans = conn.begin().await?;
+    insert_student_result_transaction_async(&mut trans, data, intake).await?;
+    trans.commit().await?;
+    Ok(())
+}
+
+/// Insert [`StudentResult`] into database using a database transaction.
+/// *Note*: This function does not commit the changes to the database.
+#[cfg(feature = "async")]
+pub async fn insert_student_result_transaction_async(
+    trans: &mut AsyncTransaction<'_, Sqlite>,
+    data: &[StudentResult],
+    intake: &AcademicYear,
+) -> Result<(), sqlx::Error> {
+    for result in data {
+        sqlx::query(
+            "INSERT INTO Result
+              (ID, AcademicYear, YearOfStudy, AutumnCredits, AutumnMean,
+               SpringCredits, SpringMean, YearCredits, YearMean, Progression,
+               Remarks)
+              VALUES
+              (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+        )
+        .bind(result.student_info.id)
+        .bind(&result.student_info.first_name)
+        .bind(&result.student_info.last_name)
+        .bind(&result.student_info.plan)
+        .bind(intake.to_string())
+        .execute(&mut **trans)
+        .await?;
+
+        sqlx::query(
+            "INSERT INTO Result
+             (ID, AcademicYear, YearOfStudy, AutumnCredits, AutumnMean,
+              SpringCredits, SpringMean, YearCredits, YearMean, Progression,
+              Remarks)
+             VALUES 
+             (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+        )
+        .bind(result.student_info.id)
+        .bind(intake.to_string())
+        .bind(&result.year_of_program)
+        .bind(result.autumn_credit)
+        .bind(result.autumn_mean)
+        .bind(result.spring_credit)
+        .bind(result.spring_mean)
+        .bind(result.year_credit)
+        .bind(result.year_prog_average)
+        .bind(&result.progression)
+        .bind(&result.remarks)
+        .execute(&mut **trans)
+        .await?;
+
+        for module in &result.modules {
+            sqlx::query(
+                "INSERT OR IGNORE INTO Module
+                 (Code, Credit) VALUES (?1, ?2)",
+            )
+            .bind(&module.code)
+            .bind(module.credit)
+            .execute(&mut **trans)
+            .await?;
+            let colour_id: Option<i64> = match &module.fill {
+                Some(fill) => {
+                    sqlx::query(
+                        "INSERT INTO FillColour (Alpha, Red, Green, Blue)
+                         SELECT ?1, ?2, ?3, ?4
+                         WHERE NOT EXISTS (
+                             SELECT Alpha, Red, Green, Blue
+                             FROM FillColour
+                             WHERE Alpha=?1 AND Red=?2 AND Green=?3 AND Blue=?4
+                         )",
+                    )
+                    .bind(fill.alpha)
+                    .bind(fill.red)
+                    .bind(fill.green)
+                    .bind(fill.blue)
+                    .execute(&mut **trans)
+                    .await?;
+                    Some(
+                        sqlx::query_as::<_, (i64,)>(
+                            "SELECT * FROM FillColour
+                             WHERE Alpha=?1 AND Red=?2 AND Green=?3 AND Blue=?4",
+                        )
+                        .bind(fill.alpha)
+                        .bind(fill.red)
+                        .bind(fill.green)
+                        .bind(fill.blue)
+                        .fetch_one(&mut **trans)
+                        .await?
+                        .0,
+                    )
+                }
+                None => None,
+            };
+
+            sqlx::query(
+                "INSERT INTO Mark
+              (ID, Module, Mark, Retake1, Retake2, Status, Fill)
+              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            )
+            .bind(result.student_info.id)
+            .bind(&module.code)
+            .bind(module.mark)
+            .bind(module.retake1)
+            .bind(module.retake2)
+            .bind(module.status.to_string())
+            .bind(colour_id)
+            .execute(&mut **trans)
+            .await?;
+        }
+    }
+
+    Ok(())
+}
+
 impl StudentInfo {
     pub const INSERT_STATEMENT: &'static str = "
         INSERT INTO StudentInfo
@@ -227,6 +383,7 @@ impl StudentInfo {
         ";
 
     /// Insert [`StudentInfo`] into a database using a database connection.
+    #[cfg(feature = "sync")]
     pub fn insert_db_sync(
         &self,
         conn: &mut Connection,
@@ -241,6 +398,7 @@ impl StudentInfo {
 
     /// Insert [`StudentInfo`] into database using a database transaction.
     /// *Note*: This function does not commit the changes to the database.
+    #[cfg(feature = "sync")]
     pub fn insert_db_transaction_sync(
         &self,
         trans: &Transaction,
@@ -278,9 +436,70 @@ impl StudentInfo {
 
         Ok(())
     }
+
+    /// Insert [`StudentInfo`] into a database using a database connection.
+    #[cfg(feature = "async")]
+    pub async fn insert_db_async(
+        &self,
+        conn: &mut SqlitePool,
+        intake: &AcademicYear,
+        award: bool,
+    ) -> Result<(), sqlx::Error> {
+        let mut trans = conn.begin().await?;
+        self.insert_db_transaction_async(&mut trans, intake, award)
+            .await?;
+        trans.commit().await?;
+        Ok(())
+    }
+
+    /// Insert [`StudentInfo`] into database using a database transaction.
+    /// *Note*: This function does not commit the changes to the database.
+    #[cfg(feature = "async")]
+    pub async fn insert_db_transaction_async(
+        &self,
+        trans: &mut AsyncTransaction<'_, Sqlite>,
+        intake: &AcademicYear,
+        award: bool,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query(Self::INSERT_STATEMENT)
+            .bind(self.id)
+            .bind(&self.first_name)
+            .bind(&self.last_name)
+            .bind(&self.plan)
+            .bind(&self.plan_description)
+            .bind(&self.academic_program)
+            .bind(&self.program_description)
+            .bind(&self.intake)
+            .bind(self.carrer_number)
+            .bind(
+                self.qaa_effective_date
+                    .map(|v| v.format("%D%M%Y").to_string()),
+            )
+            .bind(&self.calculation_model)
+            .bind(self.raw_mark)
+            .bind(self.truncated_mark)
+            .bind(self.final_mark)
+            .bind(&self.borderline)
+            .bind(self.calculation)
+            .bind(&self.degree_award)
+            .bind(self.selected)
+            .bind(&self.exception_data)
+            .bind(&self.recommendation)
+            .bind(intake.to_string())
+            .bind(if award {
+                Some(intake.to_string())
+            } else {
+                None
+            })
+            .execute(&mut **trans)
+            .await?;
+
+        Ok(())
+    }
 }
 
 /// Insert [`StudentInfo`] into a database using a database connection.
+#[cfg(feature = "sync")]
 pub fn insert_student_info(
     data: &[StudentInfo],
     conn: &mut Connection,
@@ -295,6 +514,7 @@ pub fn insert_student_info(
 
 /// Insert [`StudentInfo`] into database using a database transaction.
 /// *Note*: This function does not commit the changes to the database.
+#[cfg(feature = "sync")]
 pub fn insert_student_info_transaction(
     data: &[StudentInfo],
     trans: &Transaction,
@@ -303,6 +523,37 @@ pub fn insert_student_info_transaction(
 ) -> Result<(), rusqlite::Error> {
     for info in data {
         info.insert_db_transaction_sync(trans, intake, award)?;
+    }
+
+    Ok(())
+}
+
+/// Insert [`StudentInfo`] into a database using a database connection.
+#[cfg(feature = "async")]
+pub async fn insert_student_info_async(
+    conn: &mut SqlitePool,
+    data: &[StudentInfo],
+    intake: &AcademicYear,
+    award: bool,
+) -> Result<(), sqlx::Error> {
+    let mut trans = conn.begin().await?;
+    insert_student_info_transaction_async(&mut trans, data, intake, award).await?;
+    trans.commit().await?;
+    Ok(())
+}
+
+/// Insert [`StudentInfo`] into database using a database transaction.
+/// *Note*: This function does not commit the changes to the database.
+#[cfg(feature = "async")]
+pub async fn insert_student_info_transaction_async(
+    trans: &mut AsyncTransaction<'_, Sqlite>,
+    data: &[StudentInfo],
+    intake: &AcademicYear,
+    award: bool,
+) -> Result<(), sqlx::Error> {
+    for info in data {
+        info.insert_db_transaction_async(trans, intake, award)
+            .await?;
     }
 
     Ok(())

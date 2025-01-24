@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-nott-a-database-core = { path = "../nott-a-database-core" }
+nott-a-database-core = { path = "../nott-a-database-core", features = ["sync"]}
 anyhow = "1.0.94"
 clap = { version = "4.5.21", features = ["derive"] }
-refinery = { version = "0.8.14", features = ["rusqlite"] }
-rusqlite = "0.31"
+refinery = { git = "https://github.com/rust-db/refinery", features = ["rusqlite"], rev = "8e120f6"}
+rusqlite = "0.32.1"

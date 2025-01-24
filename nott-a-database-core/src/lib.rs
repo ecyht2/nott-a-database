@@ -217,6 +217,21 @@ impl Default for ModuleStatus {
     }
 }
 
+impl Display for ModuleStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                ModuleStatus::Pass => "Pass",
+                ModuleStatus::SoftFail => "SF",
+                ModuleStatus::HardFail => "HF",
+                ModuleStatus::ComponentFail => "CF",
+            }
+        )
+    }
+}
+
 /// Struct represting a result of a student in the raw data.
 #[derive(Debug, Default, Deserialize)]
 pub struct StudentResult {
