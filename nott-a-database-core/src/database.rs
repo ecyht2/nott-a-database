@@ -7,7 +7,9 @@ use sqlx::{Sqlite, SqlitePool, Transaction as AsyncTransaction};
 
 #[cfg(feature = "sync")]
 use crate::ModuleStatus;
-use crate::{AcademicYear, StudentInfo, StudentResult};
+#[cfg(any(feature = "sync", feature = "async"))]
+use crate::StudentResult;
+use crate::{AcademicYear, StudentInfo};
 
 #[cfg(feature = "sync")]
 impl ToSql for AcademicYear {
