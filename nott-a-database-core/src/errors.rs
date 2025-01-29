@@ -353,7 +353,10 @@ impl Display for ParseMayResitError {
                 )
             }
             Self::NoSubheader => {
-                write!(f, "No subheader row found when parsing spring May resit report")
+                write!(
+                    f,
+                    "No subheader row found when parsing spring May resit report"
+                )
             }
             Self::InvalidDataRow(row, e) => write!(f, "{e} at data {row}"),
         }
@@ -459,7 +462,10 @@ impl Display for ParseAugResitError {
                 )
             }
             Self::InvalidHeaders => {
-                write!(f, "No/Invalid headers found when parsing August resit report")
+                write!(
+                    f,
+                    "No/Invalid headers found when parsing August resit report"
+                )
             }
             Self::NoSubheader => {
                 write!(f, "No subheader row found when parsing August resit report")

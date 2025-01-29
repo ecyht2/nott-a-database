@@ -244,8 +244,7 @@ impl StudentInfo {
 
     /// Creates [`StudentInfo`] from award report (0B) raw data.
     pub fn from_award<P: AsRef<Path>>(file: P) -> Result<Vec<Self>, ParseAwardError> {
-        let mut excel: Xlsx<_> =
-            open_workbook(&file).map_err(ParseAwardError::WorkbookError)?;
+        let mut excel: Xlsx<_> = open_workbook(&file).map_err(ParseAwardError::WorkbookError)?;
 
         let award = excel
             .worksheet_range("Award Report")

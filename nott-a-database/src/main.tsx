@@ -13,8 +13,8 @@ import { Toaster } from "@/components/ui/toaster";
 ReactDOM.createRoot(document.querySelector("#root") as HTMLElement).render(
   <React.StrictMode>
     <BrowserRouter>
-      <nav className="p-4 border-b">
-        <div className="container mx-auto flex justify-between items-center">
+      <nav className="border-b p-4">
+        <div className="container mx-auto flex items-center justify-between">
           <h1 className="text-xl font-bold">
             <Link to="/">Nott A Database</Link>
           </h1>

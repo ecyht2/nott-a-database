@@ -26,7 +26,13 @@ type FileInputProps = React.ComponentProps<"button"> & {
   clickFn: (fileName: string | null) => void;
 };
 
-function FileInput({ className, name, accept, clickFn, ...props }: FileInputProps) {
+function FileInput({
+  className,
+  name,
+  accept,
+  clickFn,
+  ...props
+}: FileInputProps) {
   const [file, setFile] = React.useState<string | null>(null);
 
   const filters: DialogFilter[] = [];
@@ -47,7 +53,7 @@ function FileInput({ className, name, accept, clickFn, ...props }: FileInputProp
     <Button
       variant="outline"
       className={cn(
-        "w-full flex items-start gap-3 justify-start hover:bg-transparent",
+        "flex w-full items-start justify-start gap-3 hover:bg-transparent",
         className,
       )}
       onClick={async () => {
