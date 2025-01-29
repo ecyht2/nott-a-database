@@ -10,7 +10,10 @@
     "tauri": "tauri",
     "format-js": "prettier src index.html -w",
     "format-rs": "cd src-tauri && cargo fmt",
-    "format": "prettier src index.html -w && cd src-tauri && cargo fmt"
+    "format": "prettier src index.html -w && cd src-tauri && cargo fmt",
+    "lint-js": "eslint src",
+    "lint-rs": "cd src-tauri && cargo clippy",
+    "lint": "eslint src && cd src-tauri && cargo clippy"
   },
   "dependencies": {
     "@radix-ui/react-icons": "^1.3.2",
@@ -33,17 +36,22 @@
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
+    "@eslint/js": "^9.19.0",
     "@tauri-apps/cli": "^2",
     "@types/node": "^22.10.7",
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
+    "eslint": "^9.19.0",
+    "eslint-plugin-react": "^7.37.4",
+    "globals": "^15.14.0",
     "postcss": "^8.5.1",
     "prettier": "^3.4.2",
     "prettier-plugin-tailwindcss": "^0.6.11",
     "tailwindcss": "^3.4.17",
     "typescript": "~5.6.2",
+    "typescript-eslint": "^8.22.0",
     "vite": "^6.0.3"
   },
   "prettier": {

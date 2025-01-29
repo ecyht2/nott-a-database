@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { ChangeEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input, FileInput } from "@/components/ui/input";
@@ -42,7 +43,7 @@ export default function UploadPage() {
     if (event.target === null) {
       return;
     }
-    const element: HTMLInputElement = event.target as any;
+    const element: HTMLInputElement = event.target as HTMLInputElement;
     let year: string | null = element.value;
 
     if (year.length === 0) {
@@ -106,10 +107,10 @@ export default function UploadPage() {
       const end = parseInt(years[1]);
 
       if (isNaN(start)) {
-        showError(`invalid start year \"${years[0]}\" found`);
+        showError(`invalid start year "${years[0]}" found`);
         return;
       } else if (isNaN(end)) {
-        showError(`invalid end year \"${years[1]}\" found`);
+        showError(`invalid end year "${years[1]}" found`);
         return;
       } else {
         if (start + 1 !== end) {

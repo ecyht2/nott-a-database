@@ -26,13 +26,7 @@ type FileInputProps = React.ComponentProps<"button"> & {
   clickFn: (fileName: string | null) => void;
 };
 
-function FileInput({
-  className,
-  name,
-  accept,
-  clickFn,
-  ...props
-}: FileInputProps) {
+function FileInput({ className, accept, clickFn, ...props }: FileInputProps) {
   const [file, setFile] = React.useState<string | null>(null);
 
   const filters: DialogFilter[] = [];
