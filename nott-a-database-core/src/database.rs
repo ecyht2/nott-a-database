@@ -5,9 +5,9 @@ use rusqlite::{params, types::ToSqlOutput, Connection, ToSql, Transaction};
 #[cfg(feature = "async")]
 use sqlx::{Sqlite, SqlitePool, Transaction as AsyncTransaction};
 
-use crate::{AcademicYear, StudentInfo, StudentResult};
 #[cfg(feature = "sync")]
 use crate::ModuleStatus;
+use crate::{AcademicYear, StudentInfo, StudentResult};
 
 #[cfg(feature = "sync")]
 impl ToSql for AcademicYear {
@@ -208,12 +208,8 @@ pub async fn insert_student_result_transaction_async(
 ) -> Result<(), sqlx::Error> {
     for result in data {
         sqlx::query(
-            "INSERT INTO Result
-              (ID, AcademicYear, YearOfStudy, AutumnCredits, AutumnMean,
-               SpringCredits, SpringMean, YearCredits, YearMean, Progression,
-               Remarks)
-              VALUES
-              (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+            "INSERT OR IGNORE INTO StudentInfo
+             (ID, FirstName, LastName, Plan, IntakeYear) VALUES (?1, ?2, ?3, ?4, ?5)",
         )
         .bind(result.student_info.id)
         .bind(&result.student_info.first_name)
