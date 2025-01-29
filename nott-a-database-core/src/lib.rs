@@ -34,6 +34,7 @@ use serde::Deserialize;
 /// assert_eq!(year.to_string(), "2024/2025");
 /// ```
 #[derive(Clone, Debug, Deserialize)]
+#[serde(try_from = "&str")]
 pub struct AcademicYear {
     start: isize,
     end: isize,
@@ -101,6 +102,14 @@ impl FromStr for AcademicYear {
 impl Display for AcademicYear {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}/{}", self.start, self.end)
+    }
+}
+
+impl TryFrom<&str> for AcademicYear {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::from_str(value)
     }
 }
 
