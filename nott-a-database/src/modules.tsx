@@ -8,14 +8,14 @@ import {
 } from "@/components/ui/table";
 
 // This is a mock function. In a real application, you would fetch this data from your backend.
-async function getExamResults() {
+function getExamResults() {
   return [
     { id: 1, name: "John Doe", subject: "Math", score: 85 },
     { id: 2, name: "Jane Smith", subject: "Science", score: 92 },
     { id: 3, name: "Bob Johnson", subject: "History", score: 78 },
   ];
 }
-const results = await getExamResults();
+const results = getExamResults();
 
 export default function ModulesPage() {
   return (
