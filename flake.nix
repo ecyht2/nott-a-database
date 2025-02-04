@@ -17,13 +17,14 @@
       forAllSystems (system:
         f {
           pkgs = import nixpkgs {system = system;};
+          inherit system;
         });
   in {
     formatter = forAllSystems (system: nixpkgs.legacyPackages."${system}".alejandra);
-    devShell = forAllPkgs ({pkgs}: pkgs.callPackage ./shell.nix {});
-    packages = forAllPkgs ({pkgs}: {
-      cli = pkgs.callPackage ./build.nix {};
-      default = pkgs.callPackage ./build.nix {};
+    devShell = forAllPkgs ({pkgs, system}: pkgs.callPackage ./shell.nix {});
+    packages = forAllPkgs ({pkgs, system}: {
+      cli = pkgs.callPackage ./build-cli.nix {};
+      default = self.packages."${system}".cli;
     });
   };
 }
