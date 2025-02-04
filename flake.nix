@@ -10,7 +10,7 @@
     nixpkgs,
   }: let
     # The set of systems to provide outputs for
-    allSystems = ["x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin"];
+    allSystems = ["x86_64-linux" "aarch64-linux"];
     # A function that provides a system-specific Nixpkgs for the desired systems
     forAllSystems = nixpkgs.lib.genAttrs allSystems;
     forAllPkgs = f:
@@ -20,6 +20,10 @@
         });
   in {
     formatter = forAllSystems (system: nixpkgs.legacyPackages."${system}".alejandra);
-    devShell = forAllPkgs ({ pkgs }: pkgs.callPackage ./shell.nix {});
+    devShell = forAllPkgs ({pkgs}: pkgs.callPackage ./shell.nix {});
+    packages = forAllPkgs ({pkgs}: {
+      cli = pkgs.callPackage ./build.nix {};
+      default = pkgs.callPackage ./build.nix {};
+    });
   };
 }
