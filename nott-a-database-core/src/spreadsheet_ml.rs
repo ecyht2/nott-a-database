@@ -218,7 +218,7 @@ pub struct SheetCell {
 /// # Examples
 ///
 /// ```rust
-/// use nott_a_database::spreadsheet_ml::XlsxColumns;
+/// use nott_a_database_core::spreadsheet_ml::XlsxColumns;
 ///
 /// let mut columns = XlsxColumns::new();
 ///
@@ -368,7 +368,7 @@ impl Iterator for ChainPermutation<'_> {
 /// This example extracts the styles in the XLSX archive.
 ///
 /// ```rust
-/// use nott_a_database::spreadsheet_ml::{get_data, Styles};
+/// use nott_a_database_core::spreadsheet_ml::{get_data, Styles};
 ///
 /// let styles: Styles = get_data("./sample_0A.xlsx", "xl/styles.xml").expect("Unable to find file");
 /// println!("{:?}", styles);

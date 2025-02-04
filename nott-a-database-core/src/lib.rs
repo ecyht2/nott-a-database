@@ -22,7 +22,7 @@ use serde::Deserialize;
 /// # Examples
 ///
 /// ```rust
-/// use nott_a_database::AcademicYear;
+/// use nott_a_database_core::AcademicYear;
 ///
 /// // Create a new default AcademicYear (2000/20001) the first batch of
 /// // students in Nottingham Malaysia.
@@ -46,7 +46,7 @@ impl AcademicYear {
     /// # Examples
     ///
     /// ```rust
-    /// use nott_a_database::AcademicYear;
+    /// use nott_a_database_core::AcademicYear;
     ///
     /// let year = AcademicYear::new(2024);
     /// assert_eq!(year.to_string(), "2024/2025");
