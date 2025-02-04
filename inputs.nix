@@ -1,5 +1,4 @@
-{ pkgs }:
-{
+{pkgs}: {
   nativeBuildInputs = with pkgs; [
     # Core Dependencies
     cargo
