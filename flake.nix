@@ -21,8 +21,15 @@
         });
   in {
     formatter = forAllSystems (system: nixpkgs.legacyPackages."${system}".alejandra);
-    devShell = forAllPkgs ({pkgs, system}: pkgs.callPackage ./shell.nix {});
-    packages = forAllPkgs ({pkgs, system}: {
+    devShell = forAllPkgs ({
+      pkgs,
+      system,
+    }:
+      pkgs.callPackage ./shell.nix {});
+    packages = forAllPkgs ({
+      pkgs,
+      system,
+    }: {
       cli = pkgs.callPackage ./build-cli.nix {};
       default = self.packages."${system}".cli;
     });
