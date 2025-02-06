@@ -67,6 +67,43 @@ async fn insert_data(
     Ok(())
 }
 
+/// Commands, types and utilities for interacting with module data.
+mod modules {
+    use serde::Serialize;
+    use sqlx::{prelude::FromRow, SqlitePool};
+    use tauri::State;
+    use tokio::sync::Mutex;
+
+    /// Wrapper type containing all the columns of the `Module` table.
+    #[derive(Debug, Serialize, FromRow)]
+    #[sqlx(rename_all = "PascalCase")]
+    pub struct Module {
+        /// The module code of the module in the row.
+        code: String,
+        /// The number of credits of the module in the row.
+        credit: u64,
+        /// The name of the module in the row.
+        name: Option<String>,
+    }
+
+    /// Fetches all the modules currently saved in the database.
+    #[tauri::command]
+    pub async fn get_modules(db_pool: State<'_, Mutex<SqlitePool>>) -> Result<Vec<Module>, String> {
+        let db_pool = db_pool.lock().await;
+        let data = sqlx::query_as("SELECT * from Module")
+            .fetch_all(&*db_pool)
+            .await
+            .map_err(|e| e.to_string());
+        match data {
+            Ok(data) => Ok(data),
+            Err(e) => {
+                log::error!("Error fecthing module data: {e}");
+                Err(e)
+            }
+        }
+    }
+}
+
 /// Allows blocking on async code without creating a nested runtime.
 ///
 /// This function is taken from [SQL Tauri Plugin](https://github.com/tauri-apps/plugins-workspace/blob/v2/plugins/sql/src/lib.rs).
@@ -103,7 +140,7 @@ pub fn run() {
                 Ok(())
             })
         })
-        .invoke_handler(tauri::generate_handler![insert_data])
+        .invoke_handler(tauri::generate_handler![insert_data, modules::get_modules,])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

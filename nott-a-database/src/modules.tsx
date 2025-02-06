@@ -6,16 +6,42 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { invoke } from "@tauri-apps/api/core";
+import { Suspense, useEffect, useState } from "react";
+import * as log from "@tauri-apps/plugin-log";
 
-// This is a mock function. In a real application, you would fetch this data from your backend.
-function getExamResults() {
-  return [
-    { id: 1, name: "John Doe", subject: "Math", score: 85 },
-    { id: 2, name: "Jane Smith", subject: "Science", score: 92 },
-    { id: 3, name: "Bob Johnson", subject: "History", score: 78 },
-  ];
+type Module = {
+  code: string;
+  credit: number;
+  name?: string;
+};
+
+function ModuleRows() {
+  const [modules, setModules] = useState<Module[] | null>(null);
+  useEffect(() => {
+    async function fetchModules() {
+      log.info("Fetching module data");
+      try {
+        const modules = (await invoke("get_modules")) as Module[];
+        log.info("Done fetching module data");
+        log.debug(`Module Data: ${JSON.stringify(modules)}`);
+        setModules(modules);
+      } catch (e) {
+        log.error(`Error fetching module data: ${e}`);
+      }
+    }
+
+    fetchModules();
+  }, []);
+
+  return modules?.map((result) => (
+    <TableRow key={result.code}>
+      <TableCell>{result.code}</TableCell>
+      <TableCell>{result.credit}</TableCell>
+      <TableCell>{result.name ?? ""}</TableCell>
+    </TableRow>
+  ));
 }
-const results = getExamResults();
 
 export default function ModulesPage() {
   return (
@@ -23,19 +49,15 @@ export default function ModulesPage() {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Subject</TableHead>
-            <TableHead>Score</TableHead>
+            <TableHead>Module Code</TableHead>
+            <TableHead>Module Credits</TableHead>
+            <TableHead>Module Name</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {results.map((result) => (
-            <TableRow key={result.id}>
-              <TableCell>{result.name}</TableCell>
-              <TableCell>{result.subject}</TableCell>
-              <TableCell>{result.score}</TableCell>
-            </TableRow>
-          ))}
+          <Suspense fallback={<div>Loading</div>}>
+            <ModuleRows />
+          </Suspense>
         </TableBody>
       </Table>
     </div>
