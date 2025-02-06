@@ -10,16 +10,21 @@ use nott_a_database_core::{
     AcademicYear, StudentInfo, StudentResult,
 };
 
+/// Enumerations of all the different possible data types.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 enum DataType {
+    /// The `Result (0A)` data type.
     Result,
+    /// The `Award (0B)` data type.
     Award,
+    /// The `May Resit (0C)` data type.
     ResitMay,
+    /// The `August Resit (0D)` data type.
     ResitAug,
 }
 
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+// Inserts new data into the database.
 #[tauri::command]
 async fn insert_data(
     data_type: DataType,
