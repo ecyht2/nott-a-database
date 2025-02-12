@@ -25,88 +25,109 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useEffect, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import * as log from "@tauri-apps/plugin-log";
+import { useNavigate } from "react-router";
 
-const data: Payment[] = [
-  {
-    id: "m5gr84i9",
-    amount: 316,
-    status: "success",
-    email: "ken99@yahoo.com",
-  },
-  {
-    id: "3u1reuv4",
-    amount: 242,
-    status: "success",
-    email: "Abe45@gmail.com",
-  },
-  {
-    id: "derv1ws0",
-    amount: 837,
-    status: "processing",
-    email: "Monserrat44@gmail.com",
-  },
-  {
-    id: "5kma53ae",
-    amount: 874,
-    status: "success",
-    email: "Silas22@gmail.com",
-  },
-  {
-    id: "bhqecj4p",
-    amount: 721,
-    status: "failed",
-    email: "carmella@hotmail.com",
-  },
-];
-
-export type Payment = {
-  id: string;
-  amount: number;
-  status: "pending" | "processing" | "success" | "failed";
-  email: string;
+export type StudentInfo = {
+  id: number;
+  lastName: string;
+  firstName: string;
+  careerNo?: number;
+  program?: string;
+  programDesc?: string;
+  plan: string;
+  planDesc?: string;
+  intake?: string;
+  qaa?: string;
+  calcModel?: string;
+  rawMark?: number;
+  truncatedMark?: number;
+  finalMark?: number;
+  borderline?: string;
+  calculation?: number;
+  degreeAward?: string;
+  selected?: number;
+  exceptionData?: string;
+  recommendation?: string;
+  intakeYear: string;
+  graduationYear?: string;
 };
 
-export const columns: ColumnDef<Payment>[] = [
+export const columns: ColumnDef<StudentInfo>[] = [
   {
-    accessorKey: "status",
-    header: "Status",
-    cell: ({ row }) => (
-      <div className="capitalize">{row.getValue("status")}</div>
-    ),
+    accessorKey: "id",
+    header: "Student ID",
+    cell: ({ row }) => <div className="capitalize">{row.getValue("id")}</div>,
   },
   {
-    accessorKey: "email",
+    accessorKey: "firstName",
     header: ({ column }) => {
       return (
         <Button
           variant="ghost"
+          className="p-0"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-          Email
+          First Name
           <ArrowUpDown />
         </Button>
       );
     },
-    cell: ({ row }) => <div className="lowercase">{row.getValue("email")}</div>,
+    cell: ({ row }) => <div>{row.getValue("firstName")}</div>,
   },
   {
-    accessorKey: "amount",
-    header: () => <div className="text-right">Amount</div>,
-    cell: ({ row }) => {
-      const amount = parseFloat(row.getValue("amount"));
-
-      // Format the amount as a dollar amount
-      const formatted = new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
-      }).format(amount);
-
-      return <div className="text-right font-medium">{formatted}</div>;
+    accessorKey: "lastName",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          className="p-0"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Last Name
+          <ArrowUpDown />
+        </Button>
+      );
     },
+    cell: ({ row }) => <div>{row.getValue("lastName")}</div>,
+  },
+  {
+    accessorKey: "intakeYear",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          className="p-0"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Intake Year
+          <ArrowUpDown />
+        </Button>
+      );
+    },
+    cell: ({ row }) => <div>{row.getValue("intakeYear")}</div>,
   },
 ];
 
+export async function fetchStudents(): Promise<StudentInfo[]> {
+  log.info("Fetching student data");
+  try {
+    const students: StudentInfo[] = (await invoke(
+      "get_student_info",
+    )) as StudentInfo[];
+    log.info("Done fetching student data");
+    log.debug(`Students: ${JSON.stringify(students)}`);
+    return students;
+  } catch (e) {
+    log.error(`Error fetching module data: ${e}`);
+    throw e;
+  }
+}
+
 export default function StudentsPage() {
+  const navigate = useNavigate();
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     [],
@@ -114,6 +135,14 @@ export default function StudentsPage() {
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
+
+  const [data, setData] = useState<StudentInfo[]>([]);
+  useEffect(() => {
+    (async function () {
+      const students = await fetchStudents();
+      setData(students);
+    })();
+  }, []);
 
   const table = useReactTable({
     data,
@@ -138,10 +167,10 @@ export default function StudentsPage() {
     <div className="w-full">
       <div className="flex items-center py-4">
         <Input
-          placeholder="Filter emails..."
-          value={(table.getColumn("email")?.getFilterValue() as string) ?? ""}
+          placeholder="Filter ID..."
+          value={(table.getColumn("id")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
-            table.getColumn("email")?.setFilterValue(event.target.value)
+            table.getColumn("id")?.setFilterValue(event.target.value)
           }
           className="max-w-sm"
         />
@@ -170,7 +199,11 @@ export default function StudentsPage() {
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow
+                  className="cursor-pointer"
                   key={row.id}
+                  onClick={() => {
+                    navigate(`/student?id=${row.getValue("id")}`);
+                  }}
                   data-state={row.getIsSelected() && "selected"}
                 >
                   {row.getVisibleCells().map((cell) => (

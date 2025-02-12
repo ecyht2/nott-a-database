@@ -8,6 +8,7 @@ import Home from "./home";
 import UploadPage from "./upload";
 import StudentsPage from "./students";
 import ModulesPage from "./modules";
+import StudentInfo from "./student_info";
 import { Toaster } from "@/components/ui/toaster";
 
 ReactDOM.createRoot(document.querySelector("#root") as HTMLElement).render(
@@ -47,6 +48,7 @@ ReactDOM.createRoot(document.querySelector("#root") as HTMLElement).render(
           <Route index element={<Home />} />
           <Route path="upload" element={<UploadPage />} />
           <Route path="students" element={<StudentsPage />} />
+          <Route path="student" element={<StudentInfo />} />
           <Route path="modules" element={<ModulesPage />} />
         </Routes>
       </main>

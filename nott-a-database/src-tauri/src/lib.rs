@@ -1,3 +1,7 @@
+/// TODO: Move types into the core module.
+/// TODO: Limit the amount of student per fetch.
+/// TODO: Use React Suspense to prevent blocking.
+/// TODO: Handle errors when calling invokes.
 use std::path::PathBuf;
 
 use serde::Deserialize;
@@ -109,6 +113,162 @@ mod modules {
     }
 }
 
+mod students {
+    use serde::Serialize;
+    use sqlx::{prelude::FromRow, SqlitePool};
+    use tauri::State;
+    use tokio::sync::Mutex;
+
+    /// Wrapper type for a row of data in the StudentInfo table.
+    #[derive(Debug, Serialize, FromRow)]
+    #[sqlx(rename_all = "PascalCase")]
+    #[serde(rename_all = "camelCase")]
+    pub struct StudentInfo {
+        #[sqlx(rename = "ID")]
+        id: u64,
+        last_name: String,
+        first_name: String,
+        career_no: Option<u64>,
+        program: Option<String>,
+        program_desc: Option<String>,
+        plan: String,
+        plan_desc: Option<String>,
+        #[sqlx(rename = "INTAKE")]
+        intake: Option<String>,
+        #[sqlx(rename = "QAA")]
+        qaa: Option<String>,
+        calc_model: Option<String>,
+        raw_mark: Option<f64>,
+        truncated_mark: Option<f64>,
+        final_mark: Option<u64>,
+        borderline: Option<String>,
+        calculation: Option<u64>,
+        degree_award: Option<String>,
+        selected: Option<u64>,
+        exception_data: Option<String>,
+        recommendation: Option<String>,
+        intake_year: String,
+        graduation_year: Option<String>,
+    }
+
+    /// Fetches all the students in the database.
+    #[tauri::command]
+    pub async fn get_student_info(
+        db_pool: State<'_, Mutex<SqlitePool>>,
+    ) -> Result<Vec<StudentInfo>, String> {
+        let db_pool = db_pool.lock().await;
+        let data = sqlx::query_as("SELECT * from StudentInfo")
+            .fetch_all(&*db_pool)
+            .await
+            .map_err(|e| e.to_string());
+        match data {
+            Ok(data) => Ok(data),
+            Err(e) => {
+                log::error!("Error fecthing student info: {e}");
+                Err(e)
+            }
+        }
+    }
+
+    /// Fetches information about a student in the database.
+    #[tauri::command]
+    pub async fn get_student(
+        id: i64,
+        db_pool: State<'_, Mutex<SqlitePool>>,
+    ) -> Result<StudentInfo, String> {
+        let db_pool = db_pool.lock().await;
+        let data = sqlx::query_as("SELECT * from StudentInfo WHERE ID=?1")
+            .bind(id)
+            .fetch_one(&*db_pool)
+            .await
+            .map_err(|e| e.to_string());
+        match data {
+            Ok(data) => Ok(data),
+            Err(e) => {
+                log::error!("Error fecthing student info: {e}");
+                Err(e)
+            }
+        }
+    }
+
+    /// Wrapper type for a row of data in the Result table.
+    #[derive(Debug, Serialize, FromRow)]
+    #[sqlx(rename_all = "PascalCase")]
+    #[serde(rename_all = "camelCase")]
+    pub struct StudentResult {
+        academic_year: String,
+        #[sqlx(rename = "ID")]
+        id: u64,
+        year_of_study: u64,
+        autumn_credits: Option<u64>,
+        autumn_mean: Option<f64>,
+        spring_credits: Option<u64>,
+        spring_mean: Option<f64>,
+        year_credits: Option<u64>,
+        year_mean: Option<f64>,
+        progression: Option<String>,
+        remarks: Option<String>,
+    }
+
+    /// Fetches all the student's results every year in the database.
+    #[tauri::command]
+    pub async fn get_results(
+        id: i64,
+        db_pool: State<'_, Mutex<SqlitePool>>,
+    ) -> Result<Vec<StudentResult>, String> {
+        let db_pool = db_pool.lock().await;
+        let data = sqlx::query_as("SELECT * from Result WHERE ID=?1")
+            .bind(id)
+            .fetch_all(&*db_pool)
+            .await
+            .map_err(|e| e.to_string());
+        match data {
+            Ok(data) => Ok(data),
+            Err(e) => {
+                log::error!("Error fecthing results for {id}: {e}");
+                Err(e)
+            }
+        }
+    }
+
+    /// Wrapper type for a row of data in the Mark table.
+    #[derive(Debug, Serialize, FromRow)]
+    #[sqlx(rename_all = "PascalCase")]
+    #[serde(rename_all = "camelCase")]
+    pub struct Mark {
+        #[sqlx(rename = "ID")]
+        id: u64,
+        mark: f64,
+        fill: Option<u64>,
+        retake1: Option<f64>,
+        retake2: Option<f64>,
+        extra: Option<String>,
+        module: String,
+        status: String,
+    }
+
+    /// Fetches all the student's module marks in the database.
+    #[tauri::command]
+    pub async fn get_marks(
+        id: i64,
+        db_pool: State<'_, Mutex<SqlitePool>>,
+    ) -> Result<Vec<Mark>, String> {
+        let db_pool = db_pool.lock().await;
+        let data = sqlx::query_as("SELECT * from Mark WHERE ID=?1")
+            .bind(id)
+            .fetch_all(&*db_pool)
+            .await
+            .map_err(|e| e.to_string());
+        match data {
+            Ok(data) => Ok(data),
+            Err(e) => {
+                log::error!("Error fecthing marks for {id}: {e}");
+                Err(e)
+            }
+        }
+    }
+}
+
 /// Allows blocking on async code without creating a nested runtime.
 ///
 /// This function is taken from [SQL Tauri Plugin](https://github.com/tauri-apps/plugins-workspace/blob/v2/plugins/sql/src/lib.rs).
@@ -145,7 +305,14 @@ pub fn run() {
                 Ok(())
             })
         })
-        .invoke_handler(tauri::generate_handler![insert_data, modules::get_modules,])
+        .invoke_handler(tauri::generate_handler![
+            insert_data,
+            modules::get_modules,
+            students::get_student_info,
+            students::get_student,
+            students::get_results,
+            students::get_marks
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
