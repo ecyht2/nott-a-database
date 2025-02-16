@@ -76,7 +76,7 @@ CREATE TABLE "Result" (
 	SpringMean REAL,
 	YearCredits INTEGER,
 	YearMean REAL,
-	Progression INTEGER,
+	Progression TEXT,
 	Remarks TEXT,
 	CONSTRAINT results_student_info_FK FOREIGN KEY (ID) REFERENCES StudentInfo(ID),
 	CONSTRAINT Result_AcademicYear_FK FOREIGN KEY (AcademicYear) REFERENCES AcademicYear(AcademicYear)
