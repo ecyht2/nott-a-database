@@ -104,8 +104,8 @@ function GeneralInfo({ info }: { info: Promise<Student> }) {
           <TableCell>{infoData.id}</TableCell>
         </TableRow>
         <TableRow>
-          <TableHead>Last Name</TableHead>
-          <TableCell>{infoData.lastName}</TableCell>
+          <TableHead>First Name</TableHead>
+          <TableCell>{infoData.firstName}</TableCell>
         </TableRow>
         <TableRow>
           <TableHead>Last Name</TableHead>
