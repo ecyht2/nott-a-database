@@ -510,8 +510,9 @@ export default function StudentInfo() {
       <article>
         <h1>No ID Provided</h1>
         <p>
-          Please provide a vlid student ID for the student in the "id" URL
-          search params
+          {
+            'Please provide a valid student ID for the student in the "id" URL search params'
+          }
         </p>
       </article>
     );
