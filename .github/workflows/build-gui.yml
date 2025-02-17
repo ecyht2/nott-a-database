@@ -2,8 +2,6 @@ name: Build GUI
 
 on:
   workflow_dispatch:
-  create:
-    - tags
 
 jobs:
   publish-tauri:
