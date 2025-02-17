@@ -3,7 +3,7 @@ name: Build GUI
 on:
   workflow_dispatch:
   create:
-    - tag
+    - tags
 
 jobs:
   publish-tauri:
