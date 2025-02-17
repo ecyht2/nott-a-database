@@ -78,24 +78,47 @@ async fn insert_data(
 
 /// Commands, types and utilities for interacting with module data.
 mod modules {
-    use serde::Serialize;
+    use serde::{Deserialize, Serialize};
     use sqlx::{prelude::FromRow, SqlitePool};
     use tauri::State;
     use tokio::sync::Mutex;
 
     /// Wrapper type containing all the columns of the `Module` table.
-    #[derive(Debug, Serialize, FromRow)]
+    #[derive(Debug, Deserialize, Serialize, FromRow)]
     #[sqlx(rename_all = "PascalCase")]
     pub struct Module {
         /// The module code of the module in the row.
         code: String,
         /// The number of credits of the module in the row.
-        credit: u64,
+        credit: u32,
         /// The name of the module in the row.
         name: Option<String>,
     }
 
     /// Fetches all the modules currently saved in the database.
+    #[tauri::command]
+    pub async fn update_module(
+        module: Module,
+        db_pool: State<'_, Mutex<SqlitePool>>,
+    ) -> Result<Module, String> {
+        let db_pool = db_pool.lock().await;
+        let data = sqlx::query("UPDATE Module SET CREDIT=?2,NAME=?3 WHERE CODE=?1")
+            .bind(&module.code)
+            .bind(module.credit)
+            .bind(&module.name)
+            .execute(&*db_pool)
+            .await
+            .map_err(|e| e.to_string());
+        match data {
+            Ok(_) => Ok(module),
+            Err(e) => {
+                log::error!("Error updating module {}: {e}", module.code);
+                Err(e)
+            }
+        }
+    }
+
+    /// Updates a module in the database.
     #[tauri::command]
     pub async fn get_modules(db_pool: State<'_, Mutex<SqlitePool>>) -> Result<Vec<Module>, String> {
         let db_pool = db_pool.lock().await;
@@ -308,6 +331,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             insert_data,
             modules::get_modules,
+            modules::update_module,
             students::get_student_info,
             students::get_student,
             students::get_results,
