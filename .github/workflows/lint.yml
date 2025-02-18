@@ -24,6 +24,7 @@ jobs:
   lint-js:
     runs-on: ubuntu-22.04
     steps:
+    - uses: actions/checkout@v4
     - name: Setup Bun
       uses: oven-sh/setup-bun@v2
     - name: Install JS Dependencies
