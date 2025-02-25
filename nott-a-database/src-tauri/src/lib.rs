@@ -2,7 +2,7 @@
 /// TODO: Limit the amount of student per fetch.
 /// TODO: Use React Suspense to prevent blocking.
 /// TODO: Handle errors when calling invokes.
-use std::path::PathBuf;
+use std::{path::PathBuf, str::FromStr};
 
 use serde::Deserialize;
 use sqlx::{migrate, sqlite::SqliteConnectOptions, SqlitePool};
@@ -305,9 +305,12 @@ fn run_async_command<F: std::future::Future>(cmd: F) -> F::Output {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let log_level = std::env::var("NOTT_A_DATABASE_LOG").unwrap_or(String::from("WARN"));
+    let log_level = log::LevelFilter::from_str(&log_level).unwrap_or(log::LevelFilter::Warn);
+
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_log::Builder::new().build())
+        .plugin(tauri_plugin_log::Builder::new().level(log_level).build())
         .setup(|app| {
             run_async_command(async move {
                 let mut db_path = app.path().app_data_dir().expect("Unsupported OS detected.");
