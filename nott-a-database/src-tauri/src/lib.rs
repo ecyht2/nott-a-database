@@ -361,17 +361,16 @@ mod settings {
         let mut db = db_pool.lock().await;
         let db_pool = db.take().expect("There should be an unlocked database");
 
-        wrap_error!(
-            sqlx::query(&format!("PRAGMA rekey = {password}"))
-                .bind(&password)
-                .execute(&db_pool)
-                .await,
-            db,
-            db_pool
-        );
+        let result = sqlx::query(&format!("PRAGMA rekey = {password}"))
+            .bind(&password)
+            .execute(&db_pool)
+            .await;
 
         *db = Some(db_pool);
-        Ok(())
+        match result {
+            Ok(_) => Ok(()),
+            Err(e) => Err(e.to_string()),
+        }
     }
 
     #[tauri::command]
