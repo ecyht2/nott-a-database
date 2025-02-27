@@ -1,4 +1,4 @@
-/// TODO: Move types into he core module.
+/// TODO: Move types into the core module.
 /// TODO: Limit the amount of student per fetch.
 /// TODO: Use React Suspense to prevent blocking.
 /// TODO: Handle errors when calling invokes.
