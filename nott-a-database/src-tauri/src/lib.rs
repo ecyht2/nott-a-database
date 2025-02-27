@@ -5,7 +5,7 @@
 use std::{path::PathBuf, str::FromStr};
 
 use serde::Deserialize;
-use sqlx::{migrate, sqlite::SqliteConnectOptions, SqlitePool};
+use sqlx::SqlitePool;
 use tauri::{Manager, State};
 use tokio::sync::Mutex;
 
@@ -28,51 +28,75 @@ enum DataType {
     ResitAug,
 }
 
+macro_rules! wrap_error {
+    ($result:expr, $db:ident, $db_pool:ident) => {
+        match $result {
+            Ok(v) => v,
+            Err(e) => {
+                *$db = Some($db_pool);
+                return Err(e.to_string());
+            }
+        }
+    };
+}
+
 // Inserts new data into the database.
 #[tauri::command]
 async fn insert_data(
     data_type: DataType,
     academic_year: AcademicYear,
     path: PathBuf,
-    db_pool: State<'_, Mutex<SqlitePool>>,
+    db_pool: State<'_, Mutex<Option<SqlitePool>>>,
 ) -> Result<(), String> {
     log::debug!("Rust Data\nType: {data_type:?}\nYear: {academic_year}\nPath: {path:?}");
 
-    let mut db_pool = db_pool.lock().await;
+    let mut db = db_pool.lock().await;
+    let mut db_pool = db.take().expect("There should be an unlocked database");
 
     // Inserting Academic Year
-    academic_year
-        .insert_db_async(&mut db_pool)
-        .await
-        .map_err(|e| e.to_string())?;
+    wrap_error!(
+        academic_year.insert_db_async(&mut db_pool).await,
+        db,
+        db_pool
+    );
 
     // Inserting Data
     match data_type {
         DataType::Result => {
-            let data = StudentResult::from_result(path).map_err(|e| e.to_string())?;
-            insert_student_result_async(&mut db_pool, &data, &academic_year)
-                .await
-                .map_err(|e| e.to_string())?;
+            let data = wrap_error!(StudentResult::from_result(path), db, db_pool);
+            wrap_error!(
+                insert_student_result_async(&mut db_pool, &data, &academic_year).await,
+                db,
+                db_pool
+            );
         }
         DataType::Award => {
-            let data = StudentInfo::from_award(path).map_err(|e| e.to_string())?;
-            insert_student_info_async(&mut db_pool, &data, &academic_year, true)
-                .await
-                .map_err(|e| e.to_string())?;
+            let data = wrap_error!(StudentInfo::from_award(path), db, db_pool);
+            wrap_error!(
+                insert_student_info_async(&mut db_pool, &data, &academic_year, true).await,
+                db,
+                db_pool
+            );
         }
         DataType::ResitMay => {
-            let data = StudentResult::from_resit_may(path).map_err(|e| e.to_string())?;
-            insert_student_result_async(&mut db_pool, &data, &academic_year)
-                .await
-                .map_err(|e| e.to_string())?;
+            let data = wrap_error!(StudentResult::from_resit_may(path), db, db_pool);
+            wrap_error!(
+                insert_student_result_async(&mut db_pool, &data, &academic_year).await,
+                db,
+                db_pool
+            );
         }
         DataType::ResitAug => {
-            let data = StudentResult::from_resit_aug(path).map_err(|e| e.to_string())?;
-            insert_student_result_async(&mut db_pool, &data, &academic_year)
-                .await
-                .map_err(|e| e.to_string())?;
+            let data = wrap_error!(StudentResult::from_resit_aug(path), db, db_pool);
+            wrap_error!(
+                insert_student_result_async(&mut db_pool, &data, &academic_year).await,
+                db,
+                db_pool
+            );
         }
     };
+
+    *db = Some(db_pool);
     Ok(())
 }
 
@@ -99,16 +123,20 @@ mod modules {
     #[tauri::command]
     pub async fn update_module(
         module: Module,
-        db_pool: State<'_, Mutex<SqlitePool>>,
+        db_pool: State<'_, Mutex<Option<SqlitePool>>>,
     ) -> Result<Module, String> {
-        let db_pool = db_pool.lock().await;
+        let mut db = db_pool.lock().await;
+        let db_pool = db.take().expect("There should be an unlocked database");
+
         let data = sqlx::query("UPDATE Module SET CREDIT=?2,NAME=?3 WHERE CODE=?1")
             .bind(&module.code)
             .bind(module.credit)
             .bind(&module.name)
-            .execute(&*db_pool)
+            .execute(&db_pool)
             .await
             .map_err(|e| e.to_string());
+
+        *db = Some(db_pool);
         match data {
             Ok(_) => Ok(module),
             Err(e) => {
@@ -120,12 +148,18 @@ mod modules {
 
     /// Updates a module in the database.
     #[tauri::command]
-    pub async fn get_modules(db_pool: State<'_, Mutex<SqlitePool>>) -> Result<Vec<Module>, String> {
-        let db_pool = db_pool.lock().await;
+    pub async fn get_modules(
+        db_pool: State<'_, Mutex<Option<SqlitePool>>>,
+    ) -> Result<Vec<Module>, String> {
+        let mut db = db_pool.lock().await;
+        let db_pool = db.take().expect("There should be an unlocked database");
+
         let data = sqlx::query_as("SELECT * from Module")
-            .fetch_all(&*db_pool)
+            .fetch_all(&db_pool)
             .await
             .map_err(|e| e.to_string());
+
+        *db = Some(db_pool);
         match data {
             Ok(data) => Ok(data),
             Err(e) => {
@@ -177,13 +211,18 @@ mod students {
     /// Fetches all the students in the database.
     #[tauri::command]
     pub async fn get_student_info(
-        db_pool: State<'_, Mutex<SqlitePool>>,
+        db_pool: State<'_, Mutex<Option<SqlitePool>>>,
     ) -> Result<Vec<StudentInfo>, String> {
-        let db_pool = db_pool.lock().await;
+        let mut db = db_pool.lock().await;
+        let db_pool = db.take().expect("There should be an unlocked database");
+
         let data = sqlx::query_as("SELECT * from StudentInfo")
-            .fetch_all(&*db_pool)
+            .fetch_all(&db_pool)
             .await
             .map_err(|e| e.to_string());
+
+        *db = Some(db_pool);
+
         match data {
             Ok(data) => Ok(data),
             Err(e) => {
@@ -197,14 +236,19 @@ mod students {
     #[tauri::command]
     pub async fn get_student(
         id: i64,
-        db_pool: State<'_, Mutex<SqlitePool>>,
+        db_pool: State<'_, Mutex<Option<SqlitePool>>>,
     ) -> Result<StudentInfo, String> {
-        let db_pool = db_pool.lock().await;
+        let mut db = db_pool.lock().await;
+        let db_pool = db.take().expect("There should be an unlocked database");
+
         let data = sqlx::query_as("SELECT * from StudentInfo WHERE ID=?1")
             .bind(id)
-            .fetch_one(&*db_pool)
+            .fetch_one(&db_pool)
             .await
             .map_err(|e| e.to_string());
+
+        *db = Some(db_pool);
+
         match data {
             Ok(data) => Ok(data),
             Err(e) => {
@@ -237,14 +281,19 @@ mod students {
     #[tauri::command]
     pub async fn get_results(
         id: i64,
-        db_pool: State<'_, Mutex<SqlitePool>>,
+        db_pool: State<'_, Mutex<Option<SqlitePool>>>,
     ) -> Result<Vec<StudentResult>, String> {
-        let db_pool = db_pool.lock().await;
+        let mut db = db_pool.lock().await;
+        let db_pool = db.take().expect("There should be an unlocked database");
+
         let data = sqlx::query_as("SELECT * from Result WHERE ID=?1")
             .bind(id)
-            .fetch_all(&*db_pool)
+            .fetch_all(&db_pool)
             .await
             .map_err(|e| e.to_string());
+
+        *db = Some(db_pool);
+
         match data {
             Ok(data) => Ok(data),
             Err(e) => {
@@ -274,14 +323,19 @@ mod students {
     #[tauri::command]
     pub async fn get_marks(
         id: i64,
-        db_pool: State<'_, Mutex<SqlitePool>>,
+        db_pool: State<'_, Mutex<Option<SqlitePool>>>,
     ) -> Result<Vec<Mark>, String> {
-        let db_pool = db_pool.lock().await;
+        let mut db = db_pool.lock().await;
+        let db_pool = db.take().expect("There should be an unlocked database");
+
         let data = sqlx::query_as("SELECT * from Mark WHERE ID=?1")
             .bind(id)
-            .fetch_all(&*db_pool)
+            .fetch_all(&db_pool)
             .await
             .map_err(|e| e.to_string());
+
+        *db = Some(db_pool);
+
         match data {
             Ok(data) => Ok(data),
             Err(e) => {
@@ -289,6 +343,85 @@ mod students {
                 Err(e)
             }
         }
+    }
+}
+
+mod settings {
+    use std::borrow::Cow;
+
+    use sqlx::{migrate, sqlite::SqliteConnectOptions, SqlitePool};
+    use tauri::{AppHandle, Manager, State};
+    use tokio::sync::Mutex;
+
+    #[tauri::command]
+    pub async fn change_password(
+        password: String,
+        db_pool: State<'_, Mutex<Option<SqlitePool>>>,
+    ) -> Result<(), String> {
+        let mut db = db_pool.lock().await;
+        let db_pool = db.take().expect("There should be an unlocked database");
+
+        let result = sqlx::query(&format!("PRAGMA rekey = {password}"))
+            .bind(&password)
+            .execute(&db_pool)
+            .await;
+
+        *db = Some(db_pool);
+        match result {
+            Ok(_) => Ok(()),
+            Err(e) => Err(e.to_string()),
+        }
+    }
+
+    #[tauri::command]
+    pub async fn decrypt_db(
+        password: String,
+        app: AppHandle,
+        db_pool: State<'_, Mutex<Option<SqlitePool>>>,
+    ) -> Result<bool, String> {
+        let mut db_path = app.path().app_data_dir().expect("Unsupported OS detected.");
+        std::fs::create_dir_all(&db_path).unwrap();
+        db_path.push("data.db");
+
+        let db_options = SqliteConnectOptions::new()
+            .filename(db_path)
+            .create_if_missing(true)
+            .pragma("key", password)
+            .foreign_keys(true);
+
+        let pool = SqlitePool::connect_with(db_options)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        let status = migrate!("../../nott-a-database-core/migrations-async")
+            .run(&pool)
+            .await;
+
+        match status {
+            Ok(_) => {
+                *db_pool.lock().await = Some(pool);
+                Ok(true)
+            }
+            Err(sqlx::migrate::MigrateError::Execute(sqlx::Error::Database(e))) => {
+                *db_pool.lock().await = None;
+                match e.code() {
+                    Some(Cow::Owned(val)) if val == *"26" => Ok(false),
+                    _ => Err(e.to_string()),
+                }
+            }
+            Err(e) => {
+                *db_pool.lock().await = None;
+                Err(e.to_string())
+            }
+        }
+    }
+
+    #[tauri::command]
+    pub async fn check_decryption(
+        db_pool: State<'_, Mutex<Option<SqlitePool>>>,
+    ) -> Result<bool, ()> {
+        let db = db_pool.lock().await;
+        Ok(db.is_some())
     }
 }
 
@@ -313,20 +446,7 @@ pub fn run() {
         .plugin(tauri_plugin_log::Builder::new().level(log_level).build())
         .setup(|app| {
             run_async_command(async move {
-                let mut db_path = app.path().app_data_dir().expect("Unsupported OS detected.");
-                std::fs::create_dir_all(&db_path).unwrap();
-                db_path.push("data.db");
-
-                let db_options = SqliteConnectOptions::new()
-                    .filename(db_path)
-                    .create_if_missing(true)
-                    .pragma("foreign_keys", "1");
-
-                let pool = SqlitePool::connect_with(db_options).await?;
-                migrate!("../../nott-a-database-core/migrations-async")
-                    .run(&pool)
-                    .await?;
-                app.manage(Mutex::new(pool));
+                app.manage(Mutex::<Option<SqlitePool>>::new(None));
 
                 Ok(())
             })
@@ -338,7 +458,10 @@ pub fn run() {
             students::get_student_info,
             students::get_student,
             students::get_results,
-            students::get_marks
+            students::get_marks,
+            settings::change_password,
+            settings::decrypt_db,
+            settings::check_decryption,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
