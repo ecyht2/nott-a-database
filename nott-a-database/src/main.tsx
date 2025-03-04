@@ -32,7 +32,7 @@ function Main() {
 
   return (
     <>
-      <nav className="border-b p-4">
+      <nav className="sticky top-0 z-50 border-b bg-[hsl(var(--background))] p-4">
         <div className="container mx-auto flex items-center gap-x-4">
           <h1 className="text-xl font-bold">
             <Link to="/">Nott A Database</Link>
@@ -67,7 +67,7 @@ function Main() {
           <ModeToggle />
         </div>
       </nav>
-      <main className="m-1">
+      <main className="m-1 flex-grow overflow-y-scroll">
         <Routes>
           <Route index element={<Home />} />
           <Route path="upload" element={<UploadPage />} />

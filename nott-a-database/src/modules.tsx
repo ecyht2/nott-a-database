@@ -185,13 +185,19 @@ function ModuleRows() {
 export default function ModulesPage() {
   return (
     <div className="rounded-md border">
-      <Table>
+      <Table className="w-full">
         <TableHeader>
           <TableRow>
-            <TableHead>Module Code</TableHead>
-            <TableHead>Module Credits</TableHead>
-            <TableHead>Module Name</TableHead>
-            <TableHead className="max-w-1"></TableHead>
+            <TableHead className="sticky top-0 bg-[hsl(var(--background))]">
+              Module Code
+            </TableHead>
+            <TableHead className="sticky top-0 bg-[hsl(var(--background))]">
+              Module Credits
+            </TableHead>
+            <TableHead className="sticky top-0 bg-[hsl(var(--background))]">
+              Module Name
+            </TableHead>
+            <TableHead className="sticky top-0 max-w-1 bg-[hsl(var(--background))]"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
