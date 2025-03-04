@@ -175,7 +175,7 @@ export default function StudentsPage() {
           className="max-w-sm"
         />
       </div>
-      <div className="rounded-md border">
+      <div className="h-[410px] rounded-md border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
