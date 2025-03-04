@@ -59,6 +59,7 @@ export const columns: ColumnDef<StudentInfo>[] = [
   {
     accessorKey: "id",
     header: "Student ID",
+    filterFn: "includesString",
     cell: ({ row }) => <div className="capitalize">{row.getValue("id")}</div>,
   },
   {
