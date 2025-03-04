@@ -97,7 +97,7 @@ pub fn insert_student_result_transaction(
     intake: &AcademicYear,
 ) -> Result<(), rusqlite::Error> {
     let mut insert_result = trans.prepare(
-        "INSERT INTO Result
+        "INSERT OR REPLACE INTO Result
          (ID, AcademicYear, YearOfStudy, AutumnCredits, AutumnMean,
           SpringCredits, SpringMean, YearCredits, YearMean, Progression,
           Remarks)
@@ -113,7 +113,7 @@ pub fn insert_student_result_transaction(
          (Code, Credit) VALUES (?1, ?2)",
     )?;
     let mut insert_mark = trans.prepare(
-        "INSERT INTO Mark
+        "INSERT OR REPLACE INTO Mark
          (ID, Module, Mark, Retake1, Retake2, Status, Fill)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
     )?;
@@ -222,7 +222,7 @@ pub async fn insert_student_result_transaction_async(
         .await?;
 
         sqlx::query(
-            "INSERT INTO Result
+            "INSERT OR REPLACE INTO Result
              (ID, AcademicYear, YearOfStudy, AutumnCredits, AutumnMean,
               SpringCredits, SpringMean, YearCredits, YearMean, Progression,
               Remarks)
@@ -287,7 +287,7 @@ pub async fn insert_student_result_transaction_async(
             };
 
             sqlx::query(
-                "INSERT INTO Mark
+                "INSERT OR REPLACE INTO Mark
               (ID, Module, Mark, Retake1, Retake2, Status, Fill)
               VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             )

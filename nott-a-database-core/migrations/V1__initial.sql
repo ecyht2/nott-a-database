@@ -60,6 +60,7 @@ CREATE TABLE "Mark" (
 	Extra TEXT,
 	Module TEXT NOT NULL,
     Status TEXT CHECK ( Status in ("Pass", "CF", "HF", "SF") ) NOT NULL,
+	PRIMARY KEY("ID", "Module"),
 	CONSTRAINT marks_fill_FK FOREIGN KEY (Fill) REFERENCES "FillColour"(rowid),
 	CONSTRAINT FK_marks_student_info FOREIGN KEY (ID) REFERENCES "StudentInfo"(ID),
 	CONSTRAINT marks_modules_FK FOREIGN KEY (Module) REFERENCES "Module"(Code)
@@ -78,6 +79,7 @@ CREATE TABLE "Result" (
 	YearMean REAL,
 	Progression TEXT,
 	Remarks TEXT,
+	PRIMARY KEY("ID", "AcademicYear"),
 	CONSTRAINT results_student_info_FK FOREIGN KEY (ID) REFERENCES StudentInfo(ID),
 	CONSTRAINT Result_AcademicYear_FK FOREIGN KEY (AcademicYear) REFERENCES AcademicYear(AcademicYear)
 );
