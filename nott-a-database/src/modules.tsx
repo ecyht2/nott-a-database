@@ -136,7 +136,7 @@ function EditModule({
 }
 
 function ModuleRows() {
-  const [modules, setModules] = useState<Module[] | null>(null);
+  const [modules, setModules] = useState<Module[]>([]);
   useEffect(() => {
     async function fetchModules() {
       log.info("Fetching module data");
@@ -153,7 +153,17 @@ function ModuleRows() {
     fetchModules();
   }, []);
 
-  return modules?.map((result, idx) => (
+  if (modules.length === 0) {
+    return (
+      <TableRow>
+        <TableCell colSpan={3} className="text-muted-foreground">
+          {"No modules found. Please upload data in the Upload page."}
+        </TableCell>
+      </TableRow>
+    );
+  }
+
+  return modules.map((result, idx) => (
     <TableRow key={result.code}>
       <TableCell>{result.code}</TableCell>
       <TableCell>{result.credit}</TableCell>

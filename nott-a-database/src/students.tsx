@@ -220,9 +220,9 @@ export default function StudentsPage() {
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
-                  className="h-24 text-center"
+                  className="h-full text-muted-foreground"
                 >
-                  No results.
+                  {"No results found."}
                 </TableCell>
               </TableRow>
             )}
