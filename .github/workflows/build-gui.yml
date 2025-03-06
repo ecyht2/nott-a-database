@@ -105,15 +105,15 @@ jobs:
         run: cd nott-a-database && bun install # change this to npm or pnpm depending on which one you use.
 
       - uses: tauri-apps/tauri-action@v0
+        id: tauriBuild
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           includeDebug: true
-          artifactPaths: outputs
           projectPath: nott-a-database
           args: ${{ matrix.args }}
 
       - uses: actions/upload-artifact@v4
         with:
           name: debug-builds
-          path: outputs
+          path: ${{ steps.tauriBuild.outputs.artifactPaths }}
