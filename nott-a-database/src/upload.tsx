@@ -168,7 +168,7 @@ export default function UploadPage() {
       <form onSubmit={handleSubmit}>
         <CardContent>
           <div className="grid w-full items-center gap-4">
-            <div className="flex max-w-full flex-col space-y-1.5">
+            <div className="flex max-w-full flex-col space-y-1.5 overflow-auto">
               <Label htmlFor="type">Data Type</Label>
               <Select onValueChange={handleTypeChange} name="type">
                 <SelectTrigger>
@@ -185,11 +185,11 @@ export default function UploadPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex max-w-full flex-col space-y-1.5">
+            <div className="flex max-w-full flex-col space-y-1.5 overflow-auto">
               <Label htmlFor="year">Academic Year</Label>
               <Input id="year" name="year" onChange={handleYearChange} />
             </div>
-            <div className="flex max-w-full flex-col space-y-1.5">
+            <div className="flex max-w-full flex-col space-y-1.5 overflow-auto">
               <Label htmlFor="file">XLSX File</Label>
               <FileInput
                 name="file"
