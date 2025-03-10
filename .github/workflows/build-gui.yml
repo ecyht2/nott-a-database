@@ -13,12 +13,16 @@ jobs:
         include:
           - platform: 'macos-latest' # for Arm based macs (M1 and above).
             args: '--target aarch64-apple-darwin'
+            artifactName: debug-builds-aarch64-apple-darwin
           - platform: 'macos-latest' # for Intel based macs.
             args: '--target x86_64-apple-darwin'
+            artifactName: debug-builds-x86_64-apple-darwin
           - platform: 'ubuntu-22.04'
             args: ''
+            artifactName: debug-builds-x86_64-linux
           - platform: 'windows-latest'
             args: ''
+            artifactName: debug-builds-x86_64-windows
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -116,7 +120,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: debug-builds
+          name: ${{ matrix.artifactName }}
           path: |
             target/debug/bundle/*/*
             target/*/debug/bundle/*/*
