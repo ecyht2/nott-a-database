@@ -47,7 +47,7 @@ function FileInput({ className, accept, clickFn, ...props }: FileInputProps) {
     <Button
       variant="outline"
       className={cn(
-        "flex w-full items-start justify-start gap-3 hover:bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring hover:outline-none hover:ring-1 hover:ring-inset hover:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+        "flex w-full items-start justify-start gap-3 hover:bg-transparent hover:outline-none hover:ring-1 hover:ring-inset hover:ring-ring focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
         className,
       )}
       onClick={async () => {
