@@ -32,4 +32,4 @@ jobs:
     - name: Install JS Dependencies
       run: cd nott-a-database && bun install --dev
     - name: JS Formatting
-      run: cd nott-a-database && bun run format-js -- --check
+      run: cd nott-a-database && bunx prettier src index.html --check
