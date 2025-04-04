@@ -23,6 +23,13 @@ struct Arg {
     /// List of raw data file to parse.
     #[command(flatten)]
     data: RawData,
+
+    /// Prints nothing to the standard output.
+    #[arg(short, long, group = "print")]
+    quiet: bool,
+    /// Prints debug outputs to the standard output.
+    #[arg(short, long, group = "print")]
+    verbose: bool,
 }
 
 /// CLI arguments to supply raw data.
@@ -46,6 +53,9 @@ struct RawData {
 fn main() -> Result<(), anyhow::Error> {
     let args = Arg::parse();
 
+    if !args.quiet {
+        println!("Saving data to: {}", &args.datbase.to_string_lossy());
+    }
     let mut conn = Connection::open(args.datbase)?;
     conn.pragma(None, "foreign_keys", 1, |_| Ok(()))?;
     migrations::runner().run(&mut conn)?;
@@ -54,29 +64,73 @@ fn main() -> Result<(), anyhow::Error> {
 
     // Parse result raw data
     for file in args.data.result {
-        let data = StudentResult::from_result(file)?;
+        if !args.quiet {
+            println!("Parsing data from {}..", &file.to_string_lossy());
+        }
+        let data = StudentResult::from_result(&file)?;
+
+        if args.verbose {
+            println!("{:#?}", data);
+        }
+        if !args.quiet {
+            println!("Found {} rows in {}", data.len(), file.to_string_lossy());
+        }
         insert_student_result_transaction(&trans, &data, &args.academic_year)?;
     }
 
     // Parse award report raw data
     for file in args.data.award {
-        let data = StudentInfo::from_award(file)?;
+        if !args.quiet {
+            println!("Parsing data from {}..", &file.to_string_lossy());
+        }
+        let data = StudentInfo::from_award(&file)?;
+
+        if args.verbose {
+            println!("{:#?}", data);
+        }
+        if !args.quiet {
+            println!("Found {} rows in {}", data.len(), file.to_string_lossy());
+        }
         insert_student_info_transaction(&data, &trans, &args.academic_year, true)?;
     }
 
     // Parse May resit raw data
     for file in args.data.resit_may {
-        let data = StudentResult::from_resit_may(file)?;
+        if !args.quiet {
+            println!("Parsing data from {}..", &file.to_string_lossy());
+        }
+        let data = StudentResult::from_resit_may(&file)?;
+
+        if args.verbose {
+            println!("{:#?}", data);
+        }
+        if !args.quiet {
+            println!("Found {} rows in {}", data.len(), file.to_string_lossy());
+        }
         insert_student_result_transaction(&trans, &data, &args.academic_year)?;
     }
 
     // Parse August resit raw data
     for file in args.data.resit_aug {
-        let data = StudentResult::from_resit_aug(file)?;
+        if !args.quiet {
+            println!("Parsing data from {}..", &file.to_string_lossy());
+        }
+        let data = StudentResult::from_resit_aug(&file)?;
+
+        if args.verbose {
+            println!("{:#?}", data);
+        }
+        if !args.quiet {
+            println!("Found {} rows in {}", data.len(), file.to_string_lossy());
+        }
         insert_student_result_transaction(&trans, &data, &args.academic_year)?;
     }
 
     trans.commit()?;
+
+    if !args.quiet {
+        println!("Done");
+    }
 
     Ok(())
 }
